@@ -13,3 +13,5 @@ It is designed to be simple, accessible, and useful for anyone who needs medicat
 1. Clone the repository:
    ```bash
    git clone https://github.com/MarsalaNabila/MediVoice1.git
+   cd MediVoice1
+
