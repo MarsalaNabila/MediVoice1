@@ -16,6 +16,13 @@ A voice-assisted medicine reminder application developed as part of **CSE327: So
 MediVoice1 is designed to help users remember to take their medicines on time.  
 It uses voice interaction and notifications to improve medication adherence, especially for elderly or visually impaired users.
 
+## Features
+- 🎙️ Voice-based reminders for medicines  
+- ⏰ Customizable schedules and timings  
+- 🔔 Notifications and alerts for each dose  
+- 📱 Simple and user-friendly interface  
+- 🌐 Accessibility support for elderly and visually impaired users  
+
 ## Installation
 ```bash
 git clone https://github.com/MarsalaNabila/MediVoice1.git
