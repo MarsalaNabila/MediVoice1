@@ -29,3 +29,8 @@ git clone https://github.com/MarsalaNabila/MediVoice1.git
 cd MediVoice1
 npm install
 npm start
+## Voice Setup
+To enable voice features, install the following dependencies:
+
+```bash
+npm install say speech-to-text node-record-lpcm16
