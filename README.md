@@ -29,8 +29,14 @@ git clone https://github.com/MarsalaNabila/MediVoice1.git
 cd MediVoice1
 npm install
 npm start
-## Voice Setup
-To enable voice features, install the following dependencies:
+## Voice Features 🎙️
+MediVoice1 supports **voice interaction** to make medicine reminders more accessible.  
+Users can:
+- Speak commands to set or manage reminders
+- Hear notifications through text-to-speech
+- Use the app hands-free for convenience
 
+### Voice Setup
+To enable voice features, install the following dependencies:
 ```bash
 npm install say speech-to-text node-record-lpcm16
