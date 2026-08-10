@@ -1,17 +1,24 @@
 # MediVoice1
-# MediVoice1
 
-MediVoice1 is a voice-assisted app that helps users remember to take their medicines on time.  
-It is designed to be simple, accessible, and useful for anyone who needs medication reminders.
+A voice-assisted medicine reminder application developed as part of **CSE327: Software Engineering** course project.
 
-## Features
-- Voice-based reminders
-- Customizable schedules
-- Notifications and alerts
+## Project Information
+- **Course:** CSE327 - Software Engineering
+- **Semester:** Summer 2026
+- **Section:** 9
+- **Project Title:** MediVoice1
+- **Supervisor:** RSY
+- **Group Members:**
+  - Marsala Uddin Nabila (ID: 2233266042)
+  - [Add other group members with IDs]
+
+## Description
+MediVoice1 is designed to help users remember to take their medicines on time.  
+It uses voice interaction and notifications to improve medication adherence, especially for elderly or visually impaired users.
 
 ## Installation
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/MarsalaNabila/MediVoice1.git
-   cd MediVoice1
-
+```bash
+git clone https://github.com/MarsalaNabila/MediVoice1.git
+cd MediVoice1
+npm install
+npm start
