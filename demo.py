@@ -62,7 +62,7 @@ def get_css():
             background-image:
                 radial-gradient(circle at 10% 20%, rgba(40,40,70,0.45), transparent 35%),
                 radial-gradient(circle at 90% 10%, rgba(249,168,38,0.25), transparent 40%),
-                radial-gradient(circle at 50% 80%, rgba(233,69,96,0.35), transparent 35%);
+                radial-gradient(circle at 50% 80%, rgba(210,210,207,0.35), transparent 35%);
             background-repeat:no-repeat;
         }
         .main .block-container {
@@ -75,8 +75,8 @@ def get_css():
             display:flex;
             align-items:center;
             gap:0.8rem;
-            border:1px solid rgba(233,69,96,0.3);
-            box-shadow:0 25px 60px rgba(233,69,96,0.15);
+            border:1px solid rgba(210,210,207,0.3);
+            box-shadow:0 25px 60px rgba(210,210,207,0.15);
             margin-bottom:1.5rem;
         }
         .section-icon {
@@ -102,8 +102,8 @@ def get_css():
             background:linear-gradient(145deg,#1e2a4a,#16213e);
             border-radius:30px;
             padding:1.7rem;
-            border:1px solid rgba(233,69,96,0.3);
-            box-shadow:0 20px 50px rgba(233,69,96,0.12);
+            border:1px solid rgba(210,210,207,0.3);
+            box-shadow:0 20px 50px rgba(210,210,207,0.12);
         }
         .filter-panel h3 {
             font-family:'Playfair Display', serif;
@@ -119,8 +119,8 @@ def get_css():
             background:linear-gradient(145deg,#1e2a4a,#16213e);
             border-radius:26px;
             padding:1rem 1.2rem;
-            border:1px solid rgba(233,69,96,0.3);
-            box-shadow:0 18px 45px rgba(233,69,96,0.15);
+            border:1px solid rgba(210,210,207,0.3);
+            box-shadow:0 18px 45px rgba(210,210,207,0.15);
         }
         .kpi-card small {
             color:var(--muted);
@@ -147,8 +147,8 @@ def get_css():
             background:var(--card);
             border-radius:30px;
             padding:1.5rem;
-            border:1px solid rgba(233,69,96,0.25);
-            box-shadow:0 25px 60px rgba(233,69,96,0.12);
+            border:1px solid rgba(210,210,207,0.25);
+            box-shadow:0 25px 60px rgba(210,210,207,0.12);
         }
         .chart-card h3 {
             margin-top:0;
@@ -165,7 +165,7 @@ def get_css():
         .stDateInput input,
         .stTimeInput input {
             border-radius:18px !important;
-            border:1px solid rgba(233,69,96,0.4) !important;
+            border:1px solid rgba(210,210,207,0.4) !important;
             background:#1e2a4a !important;
             color:var(--text) !important;
         }
@@ -176,22 +176,22 @@ def get_css():
             background:linear-gradient(135deg,var(--pink),var(--pink-dark));
             color:#fff;
             font-weight:600;
-            box-shadow:0 12px 25px rgba(233,69,96,0.25);
+            box-shadow:0 12px 25px rgba(210,210,207,0.25);
             transition:transform 0.2s ease, box-shadow 0.2s ease;
         }
         .stButton>button:hover,
         .stDownloadButton>button:hover {
             transform:translateY(-2px);
-            box-shadow:0 18px 30px rgba(233,69,96,0.32);
+            box-shadow:0 18px 30px rgba(210,210,207,0.32);
         }
         .stButton>button:active,
         .stDownloadButton>button:active {
             transform:translateY(1px);
-            box-shadow:0 8px 16px rgba(233,69,96,0.18);
+            box-shadow:0 8px 16px rgba(210,210,207,0.18);
         }
         .stButton>button:focus-visible,
         .stDownloadButton>button:focus-visible {
-            outline:3px solid rgba(233,69,96,0.6);
+            outline:3px solid rgba(210,210,207,0.6);
             outline-offset:3px;
         }
         .stTabs [role="tablist"] {
@@ -208,8 +208,8 @@ def get_css():
             padding:0.35rem 1rem;
             border-radius:999px;
             position:relative;
-            box-shadow:0 10px 25px rgba(233,69,96,0.12);
-            border:1px solid rgba(233,69,96,0.3);
+            box-shadow:0 10px 25px rgba(210,210,207,0.12);
+            border:1px solid rgba(210,210,207,0.3);
             transition:all 0.25s ease;
         }
         .stTabs [role="tab"] span {
@@ -220,7 +220,7 @@ def get_css():
         .stTabs [role="tab"][aria-selected="true"] {
             color:#fff !important;
             background:linear-gradient(120deg,var(--pink),var(--pink-dark)) !important;
-            box-shadow:0 18px 32px rgba(233,69,96,0.3);
+            box-shadow:0 18px 32px rgba(210,210,207,0.3);
             border-color:transparent;
         }
         .stTabs [role="tab"][aria-selected="true"]::after {
@@ -229,18 +229,18 @@ def get_css():
         [data-testid="stSidebar"]>div:first-child {
             background:linear-gradient(180deg,#1e2a4a,#16213e);
             border-radius:26px;
-            border:1px solid rgba(233,69,96,0.25);
+            border:1px solid rgba(210,210,207,0.25);
         }
         .tool-tablet {
             background:rgba(30,42,74,0.8);
             padding:0.4rem;
             border-radius:26px;
-            border:1px solid rgba(233,69,96,0.3);
-            box-shadow:0 12px 30px rgba(233,69,96,0.15);
+            border:1px solid rgba(210,210,207,0.3);
+            box-shadow:0 12px 30px rgba(210,210,207,0.15);
         }
         .tool-tablet.active {
             background:linear-gradient(135deg,var(--pink),var(--pink-dark));
-            box-shadow:0 22px 40px rgba(233,69,96,0.35);
+            box-shadow:0 22px 40px rgba(210,210,207,0.35);
         }
         .tool-tablet .stButton>button {
             width:100%;
@@ -262,8 +262,8 @@ def get_css():
             background:linear-gradient(145deg,#1e2a4a,#16213e);
             border-radius:30px;
             padding:1.2rem 1.4rem;
-            box-shadow:0 28px 50px rgba(233,69,96,0.15);
-            border:1px solid rgba(233,69,96,0.3);
+            box-shadow:0 28px 50px rgba(210,210,207,0.15);
+            border:1px solid rgba(210,210,207,0.3);
         }
         .accent-pill {
             width:60px;
@@ -286,8 +286,8 @@ def get_css():
             background:linear-gradient(160deg,#1e2a4a,#16213e);
             border-radius:34px;
             padding:1.5rem;
-            border:1px solid rgba(233,69,96,0.3);
-            box-shadow:0 30px 65px rgba(233,69,96,0.15);
+            border:1px solid rgba(210,210,207,0.3);
+            box-shadow:0 30px 65px rgba(210,210,207,0.15);
             min-height:420px;
             max-height:520px;
             overflow-y:auto;
@@ -300,7 +300,7 @@ def get_css():
         .chat-bubble {
             padding:0.85rem 1rem;
             border-radius:20px;
-            border:1px solid rgba(233,69,96,0.3);
+            border:1px solid rgba(210,210,207,0.3);
             box-shadow:0 12px 25px rgba(230,230,230,0.08);
         }
         .chat-bubble p {
@@ -324,8 +324,8 @@ def get_css():
             background:linear-gradient(145deg,#1e2a4a,#16213e);
             border-radius:26px;
             padding:1.2rem;
-            border:1px solid rgba(233,69,96,0.3);
-            box-shadow:0 22px 45px rgba(233,69,96,0.15);
+            border:1px solid rgba(210,210,207,0.3);
+            box-shadow:0 22px 45px rgba(210,210,207,0.15);
         }
         .quick-card h4 {
             margin-top:0;
@@ -360,8 +360,8 @@ def get_css():
             background:linear-gradient(135deg,#1e2a4a,#16213e);
             border-radius:24px;
             padding:1.2rem;
-            border:1px solid rgba(233,69,96,0.3);
-            box-shadow:0 20px 40px rgba(233,69,96,0.12);
+            border:1px solid rgba(210,210,207,0.3);
+            box-shadow:0 20px 40px rgba(210,210,207,0.12);
         }
         .status-chip {
             display:inline-flex;
@@ -377,11 +377,11 @@ def get_css():
         }
         .status-chip.chip-upcoming { background:rgba(0,201,167,0.2); color:#00c9a7; }
         .status-chip.chip-soon { background:rgba(249,168,38,0.3); color:#f9a826; }
-        .status-chip.chip-now { background:rgba(233,69,96,0.3); color:#e94560; }
+        .status-chip.chip-now { background:rgba(210,210,207,0.3); color:#e94560; }
         .status-chip.chip-overdue { background:rgba(255,63,106,0.3); color:#ff3f6a; }
         .reminder-chip.chip-upcoming { background:rgba(0,201,167,0.2); color:#00c9a7; }
         .reminder-chip.chip-soon { background:rgba(249,168,38,0.3); color:#f9a826; }
-        .reminder-chip.chip-now { background:rgba(233,69,96,0.3); color:#e94560; }
+        .reminder-chip.chip-now { background:rgba(210,210,207,0.3); color:#e94560; }
         .reminder-chip.chip-overdue { background:rgba(255,63,106,0.3); color:#ff3f6a; }
         .reminder-card .reminder-top {
             display:flex;
@@ -428,13 +428,13 @@ def get_css():
             background:linear-gradient(145deg,#1e2a4a,#16213e);
             border-radius:20px;
             padding:0.85rem 0.9rem;
-            border:1px solid rgba(233,69,96,0.3);
-            box-shadow:0 12px 28px rgba(233,69,96,0.15);
+            border:1px solid rgba(210,210,207,0.3);
+            box-shadow:0 12px 28px rgba(210,210,207,0.15);
             text-align:center;
         }
         .day-card--today {
             border-color:var(--pink);
-            box-shadow:0 18px 45px rgba(233,69,96,0.25);
+            box-shadow:0 18px 45px rgba(210,210,207,0.25);
         }
         .day-card__date {
             font-weight:700;
@@ -468,8 +468,8 @@ def get_css():
             background:linear-gradient(145deg,#0f3460,#1e2a4a);
             border-radius:26px;
             padding:1.2rem 1.3rem;
-            border:1px solid rgba(233,69,96,0.25);
-            box-shadow:0 20px 45px rgba(233,69,96,0.12);
+            border:1px solid rgba(210,210,207,0.25);
+            box-shadow:0 20px 45px rgba(210,210,207,0.12);
             display:flex;
             flex-direction:column;
             gap:0.85rem;
@@ -494,7 +494,7 @@ def get_css():
             font-weight:700;
             padding:0.25rem 0.75rem;
             border-radius:999px;
-            background:rgba(233,69,96,0.2);
+            background:rgba(210,210,207,0.2);
             color:var(--pink);
         }
         .weekly-card__stats {
@@ -506,7 +506,7 @@ def get_css():
             background:rgba(15,52,96,0.85);
             border-radius:18px;
             padding:0.6rem 0.7rem;
-            border:1px solid rgba(233,69,96,0.3);
+            border:1px solid rgba(210,210,207,0.3);
         }
         .weekly-card__stat .label {
             font-size:0.75rem;
@@ -522,7 +522,7 @@ def get_css():
             position:relative;
             height:8px;
             border-radius:999px;
-            background:rgba(233,69,96,0.3);
+            background:rgba(210,210,207,0.3);
             overflow:hidden;
         }
         .weekly-card__progress .fill {
@@ -561,7 +561,7 @@ def get_css():
             background:rgba(15,52,96,0.85);
             border-radius:14px;
             padding:0.35rem 0.6rem;
-            border:1px solid rgba(233,69,96,0.25);
+            border:1px solid rgba(210,210,207,0.25);
         }
         .weekly-card__meds li .status {
             font-size:0.78rem;
@@ -593,7 +593,7 @@ def get_css():
             font-weight:600;
             color:var(--pink);
             list-style:none;
-            border:1px solid rgba(233,69,96,0.4);
+            border:1px solid rgba(210,210,207,0.4);
             border-radius:14px;
             padding:0.35rem 0.7rem;
             background:rgba(15,52,96,0.85);
@@ -602,7 +602,7 @@ def get_css():
             display:none;
         }
         .weekly-card__more[open] summary {
-            background:rgba(233,69,96,0.15);
+            background:rgba(210,210,207,0.15);
         }
         .weekly-card__more ul {
             list-style:none;
@@ -616,8 +616,8 @@ def get_css():
             background:linear-gradient(145deg,#1e2a4a,#16213e);
             border-radius:26px;
             padding:1.2rem 1.4rem;
-            border:1px solid rgba(233,69,96,0.3);
-            box-shadow:0 18px 40px rgba(233,69,96,0.15);
+            border:1px solid rgba(210,210,207,0.3);
+            box-shadow:0 18px 40px rgba(210,210,207,0.15);
             margin-top:0.5rem;
         }
         .weekly-chart-card__title {
@@ -632,8 +632,8 @@ def get_css():
             background:linear-gradient(145deg,#1e2a4a,#16213e);
             border-radius:24px;
             padding:1rem;
-            border:1px solid rgba(233,69,96,0.4);
-            box-shadow:0 12px 28px rgba(233,69,96,0.15);
+            border:1px solid rgba(210,210,207,0.4);
+            box-shadow:0 12px 28px rgba(210,210,207,0.15);
             min-height:200px;
             display:flex;
             flex-direction:column;
@@ -683,7 +683,7 @@ def get_css():
             padding:0.4rem 0.65rem;
             border-radius:14px;
             background:rgba(15,52,96,0.7);
-            border:1px solid rgba(233,69,96,0.3);
+            border:1px solid rgba(210,210,207,0.3);
         }
         .tools-grid {
             display:grid;
@@ -700,7 +700,7 @@ def get_css():
             --bg:#ffeaf0;
             --panel:#fff4f7;
             --card:#ffffff;
-            --pink:#ff7aa2;
+            --pink:#D2D2CF;
             --pink-dark:#ff4c91;
             --yellow:#ffd86f;
             --text:#3a2a33;
@@ -716,7 +716,7 @@ def get_css():
             background-image:
                 radial-gradient(circle at 10% 20%, rgba(255,255,255,0.45), transparent 35%),
                 radial-gradient(circle at 90% 10%, rgba(255,216,111,0.35), transparent 40%),
-                radial-gradient(circle at 50% 80%, rgba(255,148,184,0.45), transparent 35%);
+                radial-gradient(circle at 50% 80%, rgba(210,210,207,0.45), transparent 35%);
             background-repeat:no-repeat;
         }
         .main .block-container {
@@ -729,8 +729,8 @@ def get_css():
             display:flex;
             align-items:center;
             gap:0.8rem;
-            border:1px solid rgba(255,148,184,0.2);
-            box-shadow:0 25px 60px rgba(255,74,145,0.12);
+            border:1px solid rgba(210,210,207,0.2);
+            box-shadow:0 25px 60px rgba(169,169,165,0.12);
             margin-bottom:1.5rem;
         }
         .section-icon {
@@ -756,8 +756,8 @@ def get_css():
             background:linear-gradient(145deg,#fff7fb,#ffe0ea);
             border-radius:30px;
             padding:1.7rem;
-            border:1px solid rgba(255,148,184,0.25);
-            box-shadow:0 20px 50px rgba(255,74,145,0.15);
+            border:1px solid rgba(210,210,207,0.25);
+            box-shadow:0 20px 50px rgba(169,169,165,0.15);
         }
         .filter-panel h3 {
             font-family:'Playfair Display', serif;
@@ -773,8 +773,8 @@ def get_css():
             background:linear-gradient(145deg,#fff7fb,#ffeef5);
             border-radius:26px;
             padding:1rem 1.2rem;
-            border:1px solid rgba(255,148,184,0.25);
-            box-shadow:0 18px 45px rgba(255,74,145,0.18);
+            border:1px solid rgba(210,210,207,0.25);
+            box-shadow:0 18px 45px rgba(169,169,165,0.18);
         }
         .kpi-card small {
             color:var(--muted);
@@ -801,8 +801,8 @@ def get_css():
             background:var(--card);
             border-radius:30px;
             padding:1.5rem;
-            border:1px solid rgba(255,148,184,0.2);
-            box-shadow:0 25px 60px rgba(255,74,145,0.15);
+            border:1px solid rgba(210,210,207,0.2);
+            box-shadow:0 25px 60px rgba(169,169,165,0.15);
         }
         .chart-card h3 {
             margin-top:0;
@@ -819,7 +819,7 @@ def get_css():
         .stDateInput input,
         .stTimeInput input {
             border-radius:18px !important;
-            border:1px solid rgba(255,148,184,0.4) !important;
+            border:1px solid rgba(210,210,207,0.4) !important;
             background:#fff !important;
         }
         .stButton>button, .stDownloadButton>button {
@@ -829,22 +829,22 @@ def get_css():
             background:linear-gradient(135deg,var(--pink),var(--pink-dark));
             color:#fff;
             font-weight:600;
-            box-shadow:0 12px 25px rgba(255,74,145,0.25);
+            box-shadow:0 12px 25px rgba(169,169,165,0.25);
             transition:transform 0.2s ease, box-shadow 0.2s ease;
         }
         .stButton>button:hover,
         .stDownloadButton>button:hover {
             transform:translateY(-2px);
-            box-shadow:0 18px 30px rgba(255,74,145,0.32);
+            box-shadow:0 18px 30px rgba(169,169,165,0.32);
         }
         .stButton>button:active,
         .stDownloadButton>button:active {
             transform:translateY(1px);
-            box-shadow:0 8px 16px rgba(255,74,145,0.18);
+            box-shadow:0 8px 16px rgba(169,169,165,0.18);
         }
         .stButton>button:focus-visible,
         .stDownloadButton>button:focus-visible {
-            outline:3px solid rgba(255,148,184,0.6);
+            outline:3px solid rgba(210,210,207,0.6);
             outline-offset:3px;
         }
         .stTabs [role="tablist"] {
@@ -861,8 +861,8 @@ def get_css():
             padding:0.35rem 1rem;
             border-radius:999px;
             position:relative;
-            box-shadow:0 10px 25px rgba(255,74,145,0.12);
-            border:1px solid rgba(255,148,184,0.25);
+            box-shadow:0 10px 25px rgba(169,169,165,0.12);
+            border:1px solid rgba(210,210,207,0.25);
             transition:all 0.25s ease;
         }
         .stTabs [role="tab"] span {
@@ -873,7 +873,7 @@ def get_css():
         .stTabs [role="tab"][aria-selected="true"] {
             color:#fff !important;
             background:linear-gradient(120deg,var(--pink),var(--pink-dark)) !important;
-            box-shadow:0 18px 32px rgba(255,74,145,0.3);
+            box-shadow:0 18px 32px rgba(169,169,165,0.3);
             border-color:transparent;
         }
         .stTabs [role="tab"][aria-selected="true"]::after {
@@ -882,18 +882,18 @@ def get_css():
         [data-testid="stSidebar"]>div:first-child {
             background:linear-gradient(180deg,#fff9fb,#ffe7ef);
             border-radius:26px;
-            border:1px solid rgba(255,148,184,0.2);
+            border:1px solid rgba(210,210,207,0.2);
         }
         .tool-tablet {
             background:rgba(255,255,255,0.8);
             padding:0.4rem;
             border-radius:26px;
-            border:1px solid rgba(255,148,184,0.3);
-            box-shadow:0 12px 30px rgba(255,74,145,0.18);
+            border:1px solid rgba(210,210,207,0.3);
+            box-shadow:0 12px 30px rgba(169,169,165,0.18);
         }
         .tool-tablet.active {
             background:linear-gradient(135deg,var(--pink),var(--pink-dark));
-            box-shadow:0 22px 40px rgba(255,74,145,0.35);
+            box-shadow:0 22px 40px rgba(169,169,165,0.35);
         }
         .tool-tablet .stButton>button {
             width:100%;
@@ -915,8 +915,8 @@ def get_css():
             background:linear-gradient(145deg,#fff7fb,#ffe0ec);
             border-radius:30px;
             padding:1.2rem 1.4rem;
-            box-shadow:0 28px 50px rgba(255,74,145,0.15);
-            border:1px solid rgba(255,148,184,0.25);
+            box-shadow:0 28px 50px rgba(169,169,165,0.15);
+            border:1px solid rgba(210,210,207,0.25);
         }
         .accent-pill {
             width:60px;
@@ -939,8 +939,8 @@ def get_css():
             background:linear-gradient(160deg,#fff8fd,#ffe0ec);
             border-radius:34px;
             padding:1.5rem;
-            border:1px solid rgba(255,148,184,0.3);
-            box-shadow:0 30px 65px rgba(255,74,145,0.18);
+            border:1px solid rgba(210,210,207,0.3);
+            box-shadow:0 30px 65px rgba(169,169,165,0.18);
             min-height:420px;
             max-height:520px;
             overflow-y:auto;
@@ -953,7 +953,7 @@ def get_css():
         .chat-bubble {
             padding:0.85rem 1rem;
             border-radius:20px;
-            border:1px solid rgba(255,148,184,0.25);
+            border:1px solid rgba(210,210,207,0.25);
             box-shadow:0 12px 25px rgba(58,42,51,0.08);
         }
         .chat-bubble p {
@@ -977,8 +977,8 @@ def get_css():
             background:linear-gradient(145deg,#fff7fb,#ffe0ec);
             border-radius:26px;
             padding:1.2rem;
-            border:1px solid rgba(255,148,184,0.25);
-            box-shadow:0 22px 45px rgba(255,74,145,0.15);
+            border:1px solid rgba(210,210,207,0.25);
+            box-shadow:0 22px 45px rgba(169,169,165,0.15);
         }
         .quick-card h4 {
             margin-top:0;
@@ -1013,8 +1013,8 @@ def get_css():
             background:linear-gradient(135deg,#fff6fb,#ffe6ef);
             border-radius:24px;
             padding:1.2rem;
-            border:1px solid rgba(255,148,184,0.25);
-            box-shadow:0 20px 40px rgba(255,74,145,0.12);
+            border:1px solid rgba(210,210,207,0.25);
+            box-shadow:0 20px 40px rgba(169,169,165,0.12);
         }
         .status-chip {
             display:inline-flex;
@@ -1030,11 +1030,11 @@ def get_css():
         }
         .status-chip.chip-upcoming { background:rgba(0,201,167,0.15); color:#008f74; }
         .status-chip.chip-soon { background:rgba(255,216,111,0.3); color:#a36a00; }
-        .status-chip.chip-now { background:rgba(255,74,145,0.2); color:#c11263; }
+        .status-chip.chip-now { background:rgba(169,169,165,0.2); color:#c11263; }
         .status-chip.chip-overdue { background:rgba(255,63,106,0.25); color:#861135; }
         .reminder-chip.chip-upcoming { background:rgba(0,201,167,0.15); color:#008f74; }
         .reminder-chip.chip-soon { background:rgba(255,216,111,0.3); color:#a36a00; }
-        .reminder-chip.chip-now { background:rgba(255,74,145,0.2); color:#c11263; }
+        .reminder-chip.chip-now { background:rgba(169,169,165,0.2); color:#c11263; }
         .reminder-chip.chip-overdue { background:rgba(255,63,106,0.25); color:#861135; }
         .reminder-card .reminder-top {
             display:flex;
@@ -1081,13 +1081,13 @@ def get_css():
             background:linear-gradient(145deg,#fff7fb,#ffe8ef);
             border-radius:20px;
             padding:0.85rem 0.9rem;
-            border:1px solid rgba(255,148,184,0.25);
-            box-shadow:0 12px 28px rgba(255,74,145,0.18);
+            border:1px solid rgba(210,210,207,0.25);
+            box-shadow:0 12px 28px rgba(169,169,165,0.18);
             text-align:center;
         }
         .day-card--today {
             border-color:var(--pink);
-            box-shadow:0 18px 45px rgba(255,74,145,0.28);
+            box-shadow:0 18px 45px rgba(169,169,165,0.28);
         }
         .day-card__date {
             font-weight:700;
@@ -1121,8 +1121,8 @@ def get_css():
             background:linear-gradient(145deg,#fff,#ffeef5);
             border-radius:26px;
             padding:1.2rem 1.3rem;
-            border:1px solid rgba(255,148,184,0.2);
-            box-shadow:0 20px 45px rgba(255,74,145,0.15);
+            border:1px solid rgba(210,210,207,0.2);
+            box-shadow:0 20px 45px rgba(169,169,165,0.15);
             display:flex;
             flex-direction:column;
             gap:0.85rem;
@@ -1147,7 +1147,7 @@ def get_css():
             font-weight:700;
             padding:0.25rem 0.75rem;
             border-radius:999px;
-            background:rgba(255,74,145,0.12);
+            background:rgba(169,169,165,0.12);
             color:var(--pink-dark);
         }
         .weekly-card__stats {
@@ -1159,7 +1159,7 @@ def get_css():
             background:rgba(255,255,255,0.85);
             border-radius:18px;
             padding:0.6rem 0.7rem;
-            border:1px solid rgba(255,148,184,0.25);
+            border:1px solid rgba(210,210,207,0.25);
         }
         .weekly-card__stat .label {
             font-size:0.75rem;
@@ -1175,7 +1175,7 @@ def get_css():
             position:relative;
             height:8px;
             border-radius:999px;
-            background:rgba(255,148,184,0.2);
+            background:rgba(210,210,207,0.2);
             overflow:hidden;
         }
         .weekly-card__progress .fill {
@@ -1214,7 +1214,7 @@ def get_css():
             background:rgba(255,255,255,0.85);
             border-radius:14px;
             padding:0.35rem 0.6rem;
-            border:1px solid rgba(255,148,184,0.2);
+            border:1px solid rgba(210,210,207,0.2);
         }
         .weekly-card__meds li .status {
             font-size:0.78rem;
@@ -1246,7 +1246,7 @@ def get_css():
             font-weight:600;
             color:var(--pink-dark);
             list-style:none;
-            border:1px solid rgba(255,148,184,0.35);
+            border:1px solid rgba(210,210,207,0.35);
             border-radius:14px;
             padding:0.35rem 0.7rem;
             background:rgba(255,255,255,0.85);
@@ -1255,7 +1255,7 @@ def get_css():
             display:none;
         }
         .weekly-card__more[open] summary {
-            background:rgba(255,74,145,0.08);
+            background:rgba(169,169,165,0.08);
         }
         .weekly-card__more ul {
             list-style:none;
@@ -1269,8 +1269,8 @@ def get_css():
             background:linear-gradient(145deg,#fff7fb,#ffe6ef);
             border-radius:26px;
             padding:1.2rem 1.4rem;
-            border:1px solid rgba(255,148,184,0.25);
-            box-shadow:0 18px 40px rgba(255,74,145,0.18);
+            border:1px solid rgba(210,210,207,0.25);
+            box-shadow:0 18px 40px rgba(169,169,165,0.18);
             margin-top:0.5rem;
         }
         .weekly-chart-card__title {
@@ -1285,8 +1285,8 @@ def get_css():
             background:linear-gradient(145deg,#fff7fb,#ffe2ef);
             border-radius:24px;
             padding:1rem;
-            border:1px solid rgba(255,148,184,0.35);
-            box-shadow:0 12px 28px rgba(255,74,145,0.18);
+            border:1px solid rgba(210,210,207,0.35);
+            box-shadow:0 12px 28px rgba(169,169,165,0.18);
             min-height:200px;
             display:flex;
             flex-direction:column;
@@ -1336,7 +1336,7 @@ def get_css():
             padding:0.4rem 0.65rem;
             border-radius:14px;
             background:rgba(255,255,255,0.7);
-            border:1px solid rgba(255,148,184,0.25);
+            border:1px solid rgba(210,210,207,0.25);
         }
         .tools-grid {
             display:grid;
@@ -3271,7 +3271,7 @@ def login_page():
             <div class="accent-pill">💊</div>
             <h1> MediVoice</h1>
             <p>Plan doses, watch reminders, and share updates with family.</p>
-            <div style="margin:0.6rem auto 0.9rem auto;width:90px;height:90px;border-radius:24px;background:rgba(255,255,255,0.75);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 24px rgba(255,74,145,0.2);">
+            <div style="margin:0.6rem auto 0.9rem auto;width:90px;height:90px;border-radius:24px;background:rgba(255,255,255,0.75);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 24px rgba(169,169,165,0.2);">
                 <img src="https://cdn-icons-png.flaticon.com/512/2966/2966489.png"
                      style="width:60px;height:60px;" alt="App icon">
             </div>
@@ -3809,7 +3809,7 @@ def weekly_summary(conn):
             .encode(
                 x=alt.X(f"{T('med_name')}:N", sort='-y', title=T("med_name")),
                 y=alt.Y(f"{T('taken')}:Q", title=T("taken")),
-                color=alt.value("#ff6fa0")
+                color=alt.value("#A9A9A5")
             )
             .properties(width=320, height=200)
         )
@@ -3871,7 +3871,7 @@ def analytics_page(conn):
             [taken_cnt, missed_cnt],
             labels=[T("taken"), T("missed")],
             autopct="%1.1f%%",
-            colors=["#ff7aa2", "#ffd1e3"]
+            colors=["#D2D2CF", "#A9A9A5"]
         )
         ax.set_title("")
         st.pyplot(fig)
@@ -3894,7 +3894,7 @@ def analytics_page(conn):
                 .encode(
                     x=alt.X(f"{T('med_name')}:N", sort='-y', title=T("med_name")),
                     y=alt.Y(f"{T('taken')}:Q", title=T("taken")),
-                    color=alt.value("#ffc2d9")
+                    color=alt.value("#A9A9A5")
                 )
                 .properties(width=300, height=300)
             )
@@ -3937,7 +3937,7 @@ def analytics_page(conn):
         .encode(
             x=alt.X('Period:N', sort=bucket_order, title='Day part'),
             y=alt.Y('OnTime:Q', title='Taken on time (%)'),
-            color=alt.value('#ff9cc5')
+            color=alt.value('#A9A9A5')
         )
         .properties(width=320, height=250)
     )
@@ -4006,7 +4006,7 @@ def monthly_report_page(conn):
                 .encode(
                     x=alt.X(f"{T('med_name')}:N", sort='-y', title=T("med_name")),
                     y=alt.Y(f"{T('taken')}:Q", title=T("taken")),
-                    color=alt.value("#ff7aa2")
+                    color=alt.value("#D2D2CF")
                 )
                 .properties(width=260, height=200)
             )
@@ -4029,7 +4029,7 @@ def monthly_report_page(conn):
                 .encode(
                     x=alt.X(f"{T('med_name')}:N", sort='-y', title=T("med_name")),
                     y=alt.Y(f"{T('taken')}:Q", title=T("taken")),
-                    color=alt.value("#ffcce0")
+                    color=alt.value("#D2D2CF")
                 )
                 .properties(width=260, height=200)
             )
