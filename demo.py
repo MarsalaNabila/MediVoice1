@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-`n# ============================================================
+# -*- coding: utf-8 -*-`n# ============================================================
 # MediVoice v2.0 — PINK THEME EDITION (Stable Build)
 # Voice Alerts • AI • Inventory • Appointments • Tools
 # ============================================================
@@ -7,7 +7,7 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 from datetime import datetime, timedelta
-import hashlib, os, tempfile, requests, re, mimetypes, json, smtplib, threading
+import hashlib, os, tempfile, requests, re, mimetypes, json, smtplib, threading, secrets
 from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
@@ -17,7 +17,7 @@ from email.mime.text import MIMEText
 from collections import deque
 # Voice modules
 from voice_input import get_voice_input
-from voice_alert import speak
+from voice_alert import speak, stop_voice
 from fpdf import FPDF
 
 pdf = FPDF()
@@ -43,14 +43,18 @@ def get_css():
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Manrope:wght@400;600;700&display=swap');
         :root {
-            --bg:#1a1a2e;
-            --panel:#16213e;
-            --card:#0f3460;
-            --pink:#e94560;
-            --pink-dark:#d32f4d;
-            --yellow:#f9a826;
-            --text:#e6e6e6;
-            --muted:#b8b8b8;
+            --bg:#041812;
+            --bg-2:#0a201d;
+            --panel:#0f2d2a;
+            --card:#123d39;
+            --soft:#184d47;
+            --primary:#34d6b4;
+            --primary-strong:#21b996;
+            --primary-soft:rgba(52, 214, 180, 0.20);
+            --line:rgba(127, 234, 210, 0.22);
+            --text:#ffffff;
+            --muted:#e6fff9;
+            --shadow:0 18px 42px rgba(2, 12, 10, 0.55);
         }
         html, body, [class*="css"]  {
             font-family:'Manrope','Segoe UI',sans-serif;
@@ -58,56 +62,59 @@ def get_css():
             background:var(--bg);
         }
         .stApp {
-            background:var(--bg);
+            background:linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 100%);
             background-image:
-                radial-gradient(circle at 10% 20%, rgba(40,40,70,0.45), transparent 35%),
-                radial-gradient(circle at 90% 10%, rgba(249,168,38,0.25), transparent 40%),
-                radial-gradient(circle at 50% 80%, rgba(210,210,207,0.35), transparent 35%);
+                radial-gradient(circle at top left, rgba(52, 214, 180, 0.18), transparent 30%),
+                radial-gradient(circle at bottom right, rgba(71, 124, 255, 0.12), transparent 35%),
+                radial-gradient(circle at center, rgba(0, 255, 180, 0.08), transparent 40%);
             background-repeat:no-repeat;
         }
         .main .block-container {
             padding: 1.8rem 2.2rem 4rem;
         }
         .section-header {
-            background:var(--card);
-            border-radius:28px;
+            background:linear-gradient(135deg, rgba(15, 45, 42, 0.98), rgba(18, 61, 57, 0.96));
+            border-radius:24px;
             padding:1.1rem 1.3rem;
             display:flex;
             align-items:center;
             gap:0.8rem;
-            border:1px solid rgba(210,210,207,0.3);
-            box-shadow:0 25px 60px rgba(210,210,207,0.15);
+            border:1px solid var(--line);
+            box-shadow:var(--shadow);
             margin-bottom:1.5rem;
         }
         .section-icon {
-            width:60px;
-            height:60px;
-            border-radius:20px;
-            background:linear-gradient(145deg,var(--pink),var(--pink-dark));
+            width:56px;
+            height:56px;
+            border-radius:18px;
+            background:linear-gradient(135deg,var(--primary),var(--primary-strong));
             color:#fff;
             font-size:28px;
             display:flex;
             align-items:center;
             justify-content:center;
+            box-shadow:0 10px 22px rgba(50, 210, 162, 0.22);
         }
         .section-header h2 {
             margin:0;
             font-family:'Playfair Display', serif;
+            color:var(--text);
         }
         .section-header p {
             margin:0;
             color:var(--muted);
         }
         .filter-panel {
-            background:linear-gradient(145deg,#1e2a4a,#16213e);
-            border-radius:30px;
-            padding:1.7rem;
-            border:1px solid rgba(210,210,207,0.3);
-            box-shadow:0 20px 50px rgba(210,210,207,0.12);
+            background:linear-gradient(145deg,#123d39,#0c2b29);
+            border-radius:26px;
+            padding:1.5rem;
+            border:1px solid var(--line);
+            box-shadow:var(--shadow);
         }
         .filter-panel h3 {
             font-family:'Playfair Display', serif;
             margin-top:0;
+            color:var(--text);
         }
         .kpi-row {
             display:grid;
@@ -116,11 +123,11 @@ def get_css():
             margin:1.4rem 0 1.6rem;
         }
         .kpi-card {
-            background:linear-gradient(145deg,#1e2a4a,#16213e);
-            border-radius:26px;
+            background:linear-gradient(145deg,#113e3a,#0e2f2d);
+            border-radius:22px;
             padding:1rem 1.2rem;
-            border:1px solid rgba(210,210,207,0.3);
-            box-shadow:0 18px 45px rgba(210,210,207,0.15);
+            border:1px solid var(--line);
+            box-shadow:var(--shadow);
         }
         .kpi-card small {
             color:var(--muted);
@@ -132,6 +139,7 @@ def get_css():
             font-size:1.6rem;
             font-weight:700;
             margin-top:0.4rem;
+            color:var(--text);
         }
         .kpi-sub {
             font-size:0.95rem;
@@ -141,18 +149,19 @@ def get_css():
             font-size:0.88rem;
             font-weight:600;
         }
-        .kpi-delta.positive { color:#4cd964; }
-        .kpi-delta.negative { color:#ff3b30; }
+        .kpi-delta.positive { color:#8ae7bc; }
+        .kpi-delta.negative { color:#ff9aa9; }
         .chart-card {
-            background:var(--card);
-            border-radius:30px;
-            padding:1.5rem;
-            border:1px solid rgba(210,210,207,0.25);
-            box-shadow:0 25px 60px rgba(210,210,207,0.12);
+            background:linear-gradient(145deg,#173b35,#12352f);
+            border-radius:24px;
+            padding:1.4rem;
+            border:1px solid var(--line);
+            box-shadow:var(--shadow);
         }
         .chart-card h3 {
             margin-top:0;
             font-family:'Playfair Display', serif;
+            color:var(--text);
         }
         .stTextInput>label, .stSelectbox>label, .stMultiSelect>label, .stTextArea>label {
             font-weight:600;
@@ -164,34 +173,35 @@ def get_css():
         .stNumberInput input,
         .stDateInput input,
         .stTimeInput input {
-            border-radius:18px !important;
-            border:1px solid rgba(210,210,207,0.4) !important;
-            background:#1e2a4a !important;
+            border-radius:14px !important;
+            border:1px solid rgba(132,227,199,0.18) !important;
+            background:#122f2a !important;
             color:var(--text) !important;
+            box-shadow:none !important;
         }
         .stButton>button, .stDownloadButton>button {
-            border-radius:999px;
+            border-radius:14px;
             border:none;
-            padding:0.55rem 1.6rem;
-            background:linear-gradient(135deg,var(--pink),var(--pink-dark));
+            padding:0.6rem 1.4rem;
+            background:linear-gradient(135deg,var(--primary),var(--primary-strong));
             color:#fff;
-            font-weight:600;
-            box-shadow:0 12px 25px rgba(210,210,207,0.25);
+            font-weight:700;
+            box-shadow:0 12px 24px rgba(50, 210, 162, 0.25);
             transition:transform 0.2s ease, box-shadow 0.2s ease;
         }
         .stButton>button:hover,
         .stDownloadButton>button:hover {
             transform:translateY(-2px);
-            box-shadow:0 18px 30px rgba(210,210,207,0.32);
+            box-shadow:0 16px 28px rgba(50, 210, 162, 0.30);
         }
         .stButton>button:active,
         .stDownloadButton>button:active {
             transform:translateY(1px);
-            box-shadow:0 8px 16px rgba(210,210,207,0.18);
+            box-shadow:0 8px 15px rgba(50, 210, 162, 0.18);
         }
         .stButton>button:focus-visible,
         .stDownloadButton>button:focus-visible {
-            outline:3px solid rgba(210,210,207,0.6);
+            outline:3px solid rgba(50, 210, 162, 0.5);
             outline-offset:3px;
         }
         .stTabs [role="tablist"] {
@@ -202,14 +212,14 @@ def get_css():
         }
         .stTabs [role="tab"] {
             border:none !important;
-            background:linear-gradient(135deg,rgba(30,42,74,0.9),rgba(22,33,62,0.75)) !important;
+            background:linear-gradient(135deg,#173b35,#102d29) !important;
             font-weight:600;
             color:var(--muted) !important;
-            padding:0.35rem 1rem;
+            padding:0.4rem 1rem;
             border-radius:999px;
             position:relative;
-            box-shadow:0 10px 25px rgba(210,210,207,0.12);
-            border:1px solid rgba(210,210,207,0.3);
+            box-shadow:0 8px 18px rgba(3, 14, 12, 0.25);
+            border:1px solid var(--line);
             transition:all 0.25s ease;
         }
         .stTabs [role="tab"] span {
@@ -219,8 +229,8 @@ def get_css():
         }
         .stTabs [role="tab"][aria-selected="true"] {
             color:#fff !important;
-            background:linear-gradient(120deg,var(--pink),var(--pink-dark)) !important;
-            box-shadow:0 18px 32px rgba(210,210,207,0.3);
+            background:linear-gradient(120deg,#ff7fb3,#d94c85) !important;
+            box-shadow:0 18px 32px rgba(217,76,133,0.28);
             border-color:transparent;
         }
         .stTabs [role="tab"][aria-selected="true"]::after {
@@ -229,18 +239,18 @@ def get_css():
         [data-testid="stSidebar"]>div:first-child {
             background:linear-gradient(180deg,#1e2a4a,#16213e);
             border-radius:26px;
-            border:1px solid rgba(210,210,207,0.25);
+            border:1px solid rgba(233,69,96,0.25);
         }
         .tool-tablet {
             background:rgba(30,42,74,0.8);
             padding:0.4rem;
             border-radius:26px;
-            border:1px solid rgba(210,210,207,0.3);
-            box-shadow:0 12px 30px rgba(210,210,207,0.15);
+            border:1px solid rgba(233,69,96,0.3);
+            box-shadow:0 12px 30px rgba(233,69,96,0.15);
         }
         .tool-tablet.active {
             background:linear-gradient(135deg,var(--pink),var(--pink-dark));
-            box-shadow:0 22px 40px rgba(210,210,207,0.35);
+            box-shadow:0 22px 40px rgba(233,69,96,0.35);
         }
         .tool-tablet .stButton>button {
             width:100%;
@@ -262,8 +272,8 @@ def get_css():
             background:linear-gradient(145deg,#1e2a4a,#16213e);
             border-radius:30px;
             padding:1.2rem 1.4rem;
-            box-shadow:0 28px 50px rgba(210,210,207,0.15);
-            border:1px solid rgba(210,210,207,0.3);
+            box-shadow:0 28px 50px rgba(233,69,96,0.15);
+            border:1px solid rgba(233,69,96,0.3);
         }
         .accent-pill {
             width:60px;
@@ -283,11 +293,11 @@ def get_css():
             background:linear-gradient(135deg,#1e2a4a,#16213e);
         }
         .ai-shell {
-            background:linear-gradient(160deg,#1e2a4a,#16213e);
-            border-radius:34px;
-            padding:1.5rem;
-            border:1px solid rgba(210,210,207,0.3);
-            box-shadow:0 30px 65px rgba(210,210,207,0.15);
+            background:linear-gradient(180deg,#f7fffb,#ebfaf5);
+            border-radius:28px;
+            padding:1.2rem;
+            border:1px solid rgba(30,166,122,0.15);
+            box-shadow:0 18px 40px rgba(25,77,63,0.08);
             min-height:420px;
             max-height:520px;
             overflow-y:auto;
@@ -298,70 +308,86 @@ def get_css():
             gap:0.9rem;
         }
         .chat-bubble {
-            padding:0.85rem 1rem;
+            padding:0.9rem 1rem;
             border-radius:20px;
-            border:1px solid rgba(210,210,207,0.3);
-            box-shadow:0 12px 25px rgba(230,230,230,0.08);
+            border:1px solid rgba(30,166,122,0.12);
+            box-shadow:0 10px 24px rgba(25,77,63,0.05);
+            width:fit-content;
+            max-width:84%;
         }
         .chat-bubble p {
-            margin:0.2rem 0 0;
+            margin:0.35rem 0 0;
+            line-height:1.55;
+            color:#21423a;
         }
         .bubble-label {
-            font-size:0.82rem;
-            letter-spacing:0.02em;
-            font-weight:600;
+            font-size:0.76rem;
+            letter-spacing:0.08em;
+            font-weight:700;
             text-transform:uppercase;
-            color:var(--muted);
+            color:#4a6e64;
         }
         .user-bubble {
-            background:#0f3460;
+            background:linear-gradient(135deg,#1ea67a,#35b892);
             align-self:flex-end;
+            border-bottom-right-radius:8px;
+            color:#fff;
+        }
+        .user-bubble .bubble-label,
+        .user-bubble p {
+            color:#fff;
         }
         .ai-bubble {
-            background:linear-gradient(145deg,#1e2a4a,#16213e);
+            background:linear-gradient(135deg,#f7fffb,#ebfaf5);
+            align-self:flex-start;
+            border-bottom-left-radius:8px;
         }
         .quick-card {
-            background:linear-gradient(145deg,#1e2a4a,#16213e);
-            border-radius:26px;
-            padding:1.2rem;
-            border:1px solid rgba(210,210,207,0.3);
-            box-shadow:0 22px 45px rgba(210,210,207,0.15);
+            background:linear-gradient(135deg,#f8fffc,#ebfaf5);
+            border-radius:22px;
+            padding:1.1rem;
+            border:1px solid rgba(30,166,122,0.12);
+            box-shadow:0 16px 35px rgba(25,77,63,0.06);
         }
         .quick-card h4 {
             margin-top:0;
-            font-family:'Playfair Display', serif;
+            color:#1c4338;
+            font-weight:800;
         }
         .prompt-note {
             font-size:0.85rem;
-            color:var(--muted);
+            color:#597a70;
             margin-bottom:0.6rem;
         }
         .voice-card {
             margin-top:1rem;
-            background:linear-gradient(145deg,#1e2a4a,#16213e);
+            background:linear-gradient(135deg,#f0fff9,#e0f5ed);
         }
         .voice-card .stButton>button {
             margin-bottom:0;
         }
         .quick-card button {
             width:100%;
-            margin-bottom:0.4rem;
-            border-radius:999px !important;
-            border:none !important;
-            background:rgba(15,52,96,0.95) !important;
-            color:var(--pink) !important;
+            margin-bottom:0.55rem;
+            border-radius:12px !important;
+            border:1px solid rgba(30,166,122,0.12) !important;
+            background:rgba(255,255,255,0.9) !important;
+            color:#155241 !important;
             font-weight:600 !important;
             box-shadow:none !important;
+            text-align:left !important;
+            padding:0.7rem 0.8rem !important;
         }
         .quick-card button:hover {
-            background:#0f3460 !important;
+            background:#fff !important;
+            border-color:rgba(30,166,122,0.25) !important;
         }
         .blue-box {
             background:linear-gradient(135deg,#1e2a4a,#16213e);
             border-radius:24px;
             padding:1.2rem;
-            border:1px solid rgba(210,210,207,0.3);
-            box-shadow:0 20px 40px rgba(210,210,207,0.12);
+            border:1px solid rgba(233,69,96,0.3);
+            box-shadow:0 20px 40px rgba(233,69,96,0.12);
         }
         .status-chip {
             display:inline-flex;
@@ -377,11 +403,11 @@ def get_css():
         }
         .status-chip.chip-upcoming { background:rgba(0,201,167,0.2); color:#00c9a7; }
         .status-chip.chip-soon { background:rgba(249,168,38,0.3); color:#f9a826; }
-        .status-chip.chip-now { background:rgba(210,210,207,0.3); color:#e94560; }
+        .status-chip.chip-now { background:rgba(233,69,96,0.3); color:#e94560; }
         .status-chip.chip-overdue { background:rgba(255,63,106,0.3); color:#ff3f6a; }
         .reminder-chip.chip-upcoming { background:rgba(0,201,167,0.2); color:#00c9a7; }
         .reminder-chip.chip-soon { background:rgba(249,168,38,0.3); color:#f9a826; }
-        .reminder-chip.chip-now { background:rgba(210,210,207,0.3); color:#e94560; }
+        .reminder-chip.chip-now { background:rgba(233,69,96,0.3); color:#e94560; }
         .reminder-chip.chip-overdue { background:rgba(255,63,106,0.3); color:#ff3f6a; }
         .reminder-card .reminder-top {
             display:flex;
@@ -425,37 +451,38 @@ def get_css():
             margin:1rem 0 1.5rem;
         }
         .day-card {
-            background:linear-gradient(145deg,#1e2a4a,#16213e);
+            background:linear-gradient(145deg,#1b3553,#162b4d);
             border-radius:20px;
             padding:0.85rem 0.9rem;
-            border:1px solid rgba(210,210,207,0.3);
-            box-shadow:0 12px 28px rgba(210,210,207,0.15);
+            border:1px solid rgba(132, 227, 199, 0.18);
+            box-shadow:0 12px 28px rgba(3, 16, 14, 0.25);
             text-align:center;
+            color:#ffffff;
         }
         .day-card--today {
-            border-color:var(--pink);
-            box-shadow:0 18px 45px rgba(210,210,207,0.25);
+            border-color:rgba(50, 210, 162, 0.75);
+            box-shadow:0 18px 45px rgba(50, 210, 162, 0.20);
         }
         .day-card__date {
             font-weight:700;
             font-size:0.95rem;
-            color:var(--text);
+            color:#ffffff;
         }
         .day-card__day {
             font-size:0.8rem;
             letter-spacing:0.08em;
-            color:var(--muted);
+            color:#ffffff;
             text-transform:uppercase;
         }
         .day-card__count {
-            font-weight:600;
-            color:var(--pink);
+            font-weight:700;
+            color:#ffffff;
             margin-top:0.4rem;
         }
         .day-card__meds {
             margin-top:0.35rem;
             font-size:0.8rem;
-            color:var(--muted);
+            color:#ffffff;
             min-height:1.6rem;
         }
         .weekly-grid {
@@ -468,8 +495,8 @@ def get_css():
             background:linear-gradient(145deg,#0f3460,#1e2a4a);
             border-radius:26px;
             padding:1.2rem 1.3rem;
-            border:1px solid rgba(210,210,207,0.25);
-            box-shadow:0 20px 45px rgba(210,210,207,0.12);
+            border:1px solid rgba(233,69,96,0.25);
+            box-shadow:0 20px 45px rgba(233,69,96,0.12);
             display:flex;
             flex-direction:column;
             gap:0.85rem;
@@ -482,20 +509,21 @@ def get_css():
         .weekly-card__day {
             font-size:0.8rem;
             text-transform:uppercase;
-            color:var(--muted);
+            color:#ffffff;
             letter-spacing:0.08em;
         }
         .weekly-card__date {
             font-size:1.15rem;
             font-weight:700;
+            color:#ffffff;
         }
         .weekly-card__badge {
             font-size:0.85rem;
             font-weight:700;
             padding:0.25rem 0.75rem;
             border-radius:999px;
-            background:rgba(210,210,207,0.2);
-            color:var(--pink);
+            background:rgba(233,69,96,0.2);
+            color:#ffffff;
         }
         .weekly-card__stats {
             display:grid;
@@ -506,7 +534,7 @@ def get_css():
             background:rgba(15,52,96,0.85);
             border-radius:18px;
             padding:0.6rem 0.7rem;
-            border:1px solid rgba(210,210,207,0.3);
+            border:1px solid rgba(233,69,96,0.3);
         }
         .weekly-card__stat .label {
             font-size:0.75rem;
@@ -522,7 +550,7 @@ def get_css():
             position:relative;
             height:8px;
             border-radius:999px;
-            background:rgba(210,210,207,0.3);
+            background:rgba(233,69,96,0.3);
             overflow:hidden;
         }
         .weekly-card__progress .fill {
@@ -561,7 +589,8 @@ def get_css():
             background:rgba(15,52,96,0.85);
             border-radius:14px;
             padding:0.35rem 0.6rem;
-            border:1px solid rgba(210,210,207,0.25);
+            border:1px solid rgba(233,69,96,0.25);
+            color:#ffffff;
         }
         .weekly-card__meds li .status {
             font-size:0.78rem;
@@ -593,7 +622,7 @@ def get_css():
             font-weight:600;
             color:var(--pink);
             list-style:none;
-            border:1px solid rgba(210,210,207,0.4);
+            border:1px solid rgba(233,69,96,0.4);
             border-radius:14px;
             padding:0.35rem 0.7rem;
             background:rgba(15,52,96,0.85);
@@ -602,7 +631,7 @@ def get_css():
             display:none;
         }
         .weekly-card__more[open] summary {
-            background:rgba(210,210,207,0.15);
+            background:rgba(233,69,96,0.15);
         }
         .weekly-card__more ul {
             list-style:none;
@@ -616,8 +645,8 @@ def get_css():
             background:linear-gradient(145deg,#1e2a4a,#16213e);
             border-radius:26px;
             padding:1.2rem 1.4rem;
-            border:1px solid rgba(210,210,207,0.3);
-            box-shadow:0 18px 40px rgba(210,210,207,0.15);
+            border:1px solid rgba(233,69,96,0.3);
+            box-shadow:0 18px 40px rgba(233,69,96,0.15);
             margin-top:0.5rem;
         }
         .weekly-chart-card__title {
@@ -629,28 +658,29 @@ def get_css():
             gap:0.5rem;
         }
         .reminder-card {
-            background:linear-gradient(145deg,#1e2a4a,#16213e);
+            background:linear-gradient(145deg,#1d3351,#162b4d);
             border-radius:24px;
             padding:1rem;
-            border:1px solid rgba(210,210,207,0.4);
-            box-shadow:0 12px 28px rgba(210,210,207,0.15);
+            border:1px solid rgba(132, 227, 199, 0.18);
+            box-shadow:0 12px 28px rgba(3, 16, 14, 0.25);
             min-height:200px;
             display:flex;
             flex-direction:column;
             justify-content:space-between;
             backdrop-filter:blur(6px);
             position:relative;
+            color:var(--text);
         }
         .reminder-chip {
             position:absolute;
             top:0.8rem;
             right:0.8rem;
             font-size:0.75rem;
-            font-weight:600;
+            font-weight:700;
             padding:0.25rem 0.65rem;
             border-radius:999px;
-            background:rgba(230,230,230,0.15);
-            color:var(--text);
+            background:rgba(50, 210, 162, 0.18);
+            color:#ebfffa;
             text-transform:uppercase;
             letter-spacing:0.06em;
         }
@@ -664,11 +694,11 @@ def get_css():
             margin:0;
             font-size:1rem;
             font-weight:700;
-            color:var(--text);
+            color:#f4fffb;
         }
         .reminder-card .reminder-time {
-            font-weight:600;
-            color:var(--muted);
+            font-weight:700;
+            color:#ddfdf0;
         }
         .reminder-card .reminder-meta {
             margin-top:0.6rem;
@@ -676,14 +706,15 @@ def get_css():
             flex-direction:column;
             gap:0.35rem;
             font-size:0.9rem;
-            color:var(--muted);
+            color:#ebfffa;
         }
         .reminder-card .reminder-meta span {
             display:block;
             padding:0.4rem 0.65rem;
             border-radius:14px;
-            background:rgba(15,52,96,0.7);
-            border:1px solid rgba(210,210,207,0.3);
+            background:rgba(255,255,255,0.04);
+            border:1px solid rgba(132, 227, 199, 0.18);
+            color:#ebfffa;
         }
         .tools-grid {
             display:grid;
@@ -697,14 +728,14 @@ def get_css():
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Manrope:wght@400;600;700&display=swap');
         :root {
-            --bg:#ffeaf0;
-            --panel:#fff4f7;
+            --bg:#fff7fb;
+            --panel:#fffafc;
             --card:#ffffff;
-            --pink:#D2D2CF;
-            --pink-dark:#ff4c91;
-            --yellow:#ffd86f;
-            --text:#3a2a33;
-            --muted:#80616b;
+            --pink:#ff6fa0;
+            --pink-dark:#d94c85;
+            --yellow:#ffd9a8;
+            --text:#2d1d2a;
+            --muted:#6b5361;
         }
         html, body, [class*="css"]  {
             font-family:'Manrope','Segoe UI',sans-serif;
@@ -716,7 +747,7 @@ def get_css():
             background-image:
                 radial-gradient(circle at 10% 20%, rgba(255,255,255,0.45), transparent 35%),
                 radial-gradient(circle at 90% 10%, rgba(255,216,111,0.35), transparent 40%),
-                radial-gradient(circle at 50% 80%, rgba(210,210,207,0.45), transparent 35%);
+                radial-gradient(circle at 50% 80%, rgba(255,148,184,0.45), transparent 35%);
             background-repeat:no-repeat;
         }
         .main .block-container {
@@ -729,8 +760,8 @@ def get_css():
             display:flex;
             align-items:center;
             gap:0.8rem;
-            border:1px solid rgba(210,210,207,0.2);
-            box-shadow:0 25px 60px rgba(169,169,165,0.12);
+            border:1px solid rgba(255,148,184,0.2);
+            box-shadow:0 25px 60px rgba(255,74,145,0.12);
             margin-bottom:1.5rem;
         }
         .section-icon {
@@ -756,8 +787,8 @@ def get_css():
             background:linear-gradient(145deg,#fff7fb,#ffe0ea);
             border-radius:30px;
             padding:1.7rem;
-            border:1px solid rgba(210,210,207,0.25);
-            box-shadow:0 20px 50px rgba(169,169,165,0.15);
+            border:1px solid rgba(255,148,184,0.25);
+            box-shadow:0 20px 50px rgba(255,74,145,0.15);
         }
         .filter-panel h3 {
             font-family:'Playfair Display', serif;
@@ -773,8 +804,8 @@ def get_css():
             background:linear-gradient(145deg,#fff7fb,#ffeef5);
             border-radius:26px;
             padding:1rem 1.2rem;
-            border:1px solid rgba(210,210,207,0.25);
-            box-shadow:0 18px 45px rgba(169,169,165,0.18);
+            border:1px solid rgba(255,148,184,0.25);
+            box-shadow:0 18px 45px rgba(255,74,145,0.18);
         }
         .kpi-card small {
             color:var(--muted);
@@ -801,8 +832,8 @@ def get_css():
             background:var(--card);
             border-radius:30px;
             padding:1.5rem;
-            border:1px solid rgba(210,210,207,0.2);
-            box-shadow:0 25px 60px rgba(169,169,165,0.15);
+            border:1px solid rgba(255,148,184,0.2);
+            box-shadow:0 25px 60px rgba(255,74,145,0.15);
         }
         .chart-card h3 {
             margin-top:0;
@@ -819,8 +850,13 @@ def get_css():
         .stDateInput input,
         .stTimeInput input {
             border-radius:18px !important;
-            border:1px solid rgba(210,210,207,0.4) !important;
+            border:1px solid rgba(255,148,184,0.4) !important;
             background:#fff !important;
+            color: var(--text) !important;
+        }
+        .stTextInput input::placeholder,
+        .stTextArea textarea::placeholder {
+            color: rgba(22, 52, 47, 0.58) !important;
         }
         .stButton>button, .stDownloadButton>button {
             border-radius:999px;
@@ -829,22 +865,22 @@ def get_css():
             background:linear-gradient(135deg,var(--pink),var(--pink-dark));
             color:#fff;
             font-weight:600;
-            box-shadow:0 12px 25px rgba(169,169,165,0.25);
+            box-shadow:0 12px 25px rgba(255,74,145,0.25);
             transition:transform 0.2s ease, box-shadow 0.2s ease;
         }
         .stButton>button:hover,
         .stDownloadButton>button:hover {
             transform:translateY(-2px);
-            box-shadow:0 18px 30px rgba(169,169,165,0.32);
+            box-shadow:0 18px 30px rgba(255,74,145,0.32);
         }
         .stButton>button:active,
         .stDownloadButton>button:active {
             transform:translateY(1px);
-            box-shadow:0 8px 16px rgba(169,169,165,0.18);
+            box-shadow:0 8px 16px rgba(255,74,145,0.18);
         }
         .stButton>button:focus-visible,
         .stDownloadButton>button:focus-visible {
-            outline:3px solid rgba(210,210,207,0.6);
+            outline:3px solid rgba(255,148,184,0.6);
             outline-offset:3px;
         }
         .stTabs [role="tablist"] {
@@ -861,8 +897,8 @@ def get_css():
             padding:0.35rem 1rem;
             border-radius:999px;
             position:relative;
-            box-shadow:0 10px 25px rgba(169,169,165,0.12);
-            border:1px solid rgba(210,210,207,0.25);
+            box-shadow:0 10px 25px rgba(255,74,145,0.12);
+            border:1px solid rgba(255,148,184,0.25);
             transition:all 0.25s ease;
         }
         .stTabs [role="tab"] span {
@@ -873,7 +909,7 @@ def get_css():
         .stTabs [role="tab"][aria-selected="true"] {
             color:#fff !important;
             background:linear-gradient(120deg,var(--pink),var(--pink-dark)) !important;
-            box-shadow:0 18px 32px rgba(169,169,165,0.3);
+            box-shadow:0 18px 32px rgba(255,74,145,0.3);
             border-color:transparent;
         }
         .stTabs [role="tab"][aria-selected="true"]::after {
@@ -882,18 +918,18 @@ def get_css():
         [data-testid="stSidebar"]>div:first-child {
             background:linear-gradient(180deg,#fff9fb,#ffe7ef);
             border-radius:26px;
-            border:1px solid rgba(210,210,207,0.2);
+            border:1px solid rgba(255,148,184,0.2);
         }
         .tool-tablet {
             background:rgba(255,255,255,0.8);
             padding:0.4rem;
             border-radius:26px;
-            border:1px solid rgba(210,210,207,0.3);
-            box-shadow:0 12px 30px rgba(169,169,165,0.18);
+            border:1px solid rgba(255,148,184,0.3);
+            box-shadow:0 12px 30px rgba(255,74,145,0.18);
         }
         .tool-tablet.active {
             background:linear-gradient(135deg,var(--pink),var(--pink-dark));
-            box-shadow:0 22px 40px rgba(169,169,165,0.35);
+            box-shadow:0 22px 40px rgba(255,74,145,0.35);
         }
         .tool-tablet .stButton>button {
             width:100%;
@@ -915,8 +951,8 @@ def get_css():
             background:linear-gradient(145deg,#fff7fb,#ffe0ec);
             border-radius:30px;
             padding:1.2rem 1.4rem;
-            box-shadow:0 28px 50px rgba(169,169,165,0.15);
-            border:1px solid rgba(210,210,207,0.25);
+            box-shadow:0 28px 50px rgba(255,74,145,0.15);
+            border:1px solid rgba(255,148,184,0.25);
         }
         .accent-pill {
             width:60px;
@@ -939,8 +975,8 @@ def get_css():
             background:linear-gradient(160deg,#fff8fd,#ffe0ec);
             border-radius:34px;
             padding:1.5rem;
-            border:1px solid rgba(210,210,207,0.3);
-            box-shadow:0 30px 65px rgba(169,169,165,0.18);
+            border:1px solid rgba(255,148,184,0.3);
+            box-shadow:0 30px 65px rgba(255,74,145,0.18);
             min-height:420px;
             max-height:520px;
             overflow-y:auto;
@@ -953,11 +989,12 @@ def get_css():
         .chat-bubble {
             padding:0.85rem 1rem;
             border-radius:20px;
-            border:1px solid rgba(210,210,207,0.25);
+            border:1px solid rgba(255,148,184,0.25);
             box-shadow:0 12px 25px rgba(58,42,51,0.08);
         }
         .chat-bubble p {
             margin:0.2rem 0 0;
+            color: #21423a;
         }
         .bubble-label {
             font-size:0.82rem;
@@ -977,8 +1014,8 @@ def get_css():
             background:linear-gradient(145deg,#fff7fb,#ffe0ec);
             border-radius:26px;
             padding:1.2rem;
-            border:1px solid rgba(210,210,207,0.25);
-            box-shadow:0 22px 45px rgba(169,169,165,0.15);
+            border:1px solid rgba(255,148,184,0.25);
+            box-shadow:0 22px 45px rgba(255,74,145,0.15);
         }
         .quick-card h4 {
             margin-top:0;
@@ -1013,8 +1050,8 @@ def get_css():
             background:linear-gradient(135deg,#fff6fb,#ffe6ef);
             border-radius:24px;
             padding:1.2rem;
-            border:1px solid rgba(210,210,207,0.25);
-            box-shadow:0 20px 40px rgba(169,169,165,0.12);
+            border:1px solid rgba(255,148,184,0.25);
+            box-shadow:0 20px 40px rgba(255,74,145,0.12);
         }
         .status-chip {
             display:inline-flex;
@@ -1030,11 +1067,11 @@ def get_css():
         }
         .status-chip.chip-upcoming { background:rgba(0,201,167,0.15); color:#008f74; }
         .status-chip.chip-soon { background:rgba(255,216,111,0.3); color:#a36a00; }
-        .status-chip.chip-now { background:rgba(169,169,165,0.2); color:#c11263; }
+        .status-chip.chip-now { background:rgba(255,74,145,0.2); color:#c11263; }
         .status-chip.chip-overdue { background:rgba(255,63,106,0.25); color:#861135; }
         .reminder-chip.chip-upcoming { background:rgba(0,201,167,0.15); color:#008f74; }
         .reminder-chip.chip-soon { background:rgba(255,216,111,0.3); color:#a36a00; }
-        .reminder-chip.chip-now { background:rgba(169,169,165,0.2); color:#c11263; }
+        .reminder-chip.chip-now { background:rgba(255,74,145,0.2); color:#c11263; }
         .reminder-chip.chip-overdue { background:rgba(255,63,106,0.25); color:#861135; }
         .reminder-card .reminder-top {
             display:flex;
@@ -1081,13 +1118,13 @@ def get_css():
             background:linear-gradient(145deg,#fff7fb,#ffe8ef);
             border-radius:20px;
             padding:0.85rem 0.9rem;
-            border:1px solid rgba(210,210,207,0.25);
-            box-shadow:0 12px 28px rgba(169,169,165,0.18);
+            border:1px solid rgba(255,148,184,0.25);
+            box-shadow:0 12px 28px rgba(255,74,145,0.18);
             text-align:center;
         }
         .day-card--today {
             border-color:var(--pink);
-            box-shadow:0 18px 45px rgba(169,169,165,0.28);
+            box-shadow:0 18px 45px rgba(255,74,145,0.28);
         }
         .day-card__date {
             font-weight:700;
@@ -1121,8 +1158,8 @@ def get_css():
             background:linear-gradient(145deg,#fff,#ffeef5);
             border-radius:26px;
             padding:1.2rem 1.3rem;
-            border:1px solid rgba(210,210,207,0.2);
-            box-shadow:0 20px 45px rgba(169,169,165,0.15);
+            border:1px solid rgba(255,148,184,0.2);
+            box-shadow:0 20px 45px rgba(255,74,145,0.15);
             display:flex;
             flex-direction:column;
             gap:0.85rem;
@@ -1147,7 +1184,7 @@ def get_css():
             font-weight:700;
             padding:0.25rem 0.75rem;
             border-radius:999px;
-            background:rgba(169,169,165,0.12);
+            background:rgba(255,74,145,0.12);
             color:var(--pink-dark);
         }
         .weekly-card__stats {
@@ -1159,7 +1196,7 @@ def get_css():
             background:rgba(255,255,255,0.85);
             border-radius:18px;
             padding:0.6rem 0.7rem;
-            border:1px solid rgba(210,210,207,0.25);
+            border:1px solid rgba(255,148,184,0.25);
         }
         .weekly-card__stat .label {
             font-size:0.75rem;
@@ -1175,7 +1212,7 @@ def get_css():
             position:relative;
             height:8px;
             border-radius:999px;
-            background:rgba(210,210,207,0.2);
+            background:rgba(255,148,184,0.2);
             overflow:hidden;
         }
         .weekly-card__progress .fill {
@@ -1214,7 +1251,7 @@ def get_css():
             background:rgba(255,255,255,0.85);
             border-radius:14px;
             padding:0.35rem 0.6rem;
-            border:1px solid rgba(210,210,207,0.2);
+            border:1px solid rgba(255,148,184,0.2);
         }
         .weekly-card__meds li .status {
             font-size:0.78rem;
@@ -1246,7 +1283,7 @@ def get_css():
             font-weight:600;
             color:var(--pink-dark);
             list-style:none;
-            border:1px solid rgba(210,210,207,0.35);
+            border:1px solid rgba(255,148,184,0.35);
             border-radius:14px;
             padding:0.35rem 0.7rem;
             background:rgba(255,255,255,0.85);
@@ -1255,7 +1292,7 @@ def get_css():
             display:none;
         }
         .weekly-card__more[open] summary {
-            background:rgba(169,169,165,0.08);
+            background:rgba(255,74,145,0.08);
         }
         .weekly-card__more ul {
             list-style:none;
@@ -1269,8 +1306,8 @@ def get_css():
             background:linear-gradient(145deg,#fff7fb,#ffe6ef);
             border-radius:26px;
             padding:1.2rem 1.4rem;
-            border:1px solid rgba(210,210,207,0.25);
-            box-shadow:0 18px 40px rgba(169,169,165,0.18);
+            border:1px solid rgba(255,148,184,0.25);
+            box-shadow:0 18px 40px rgba(255,74,145,0.18);
             margin-top:0.5rem;
         }
         .weekly-chart-card__title {
@@ -1285,8 +1322,8 @@ def get_css():
             background:linear-gradient(145deg,#fff7fb,#ffe2ef);
             border-radius:24px;
             padding:1rem;
-            border:1px solid rgba(210,210,207,0.35);
-            box-shadow:0 12px 28px rgba(169,169,165,0.18);
+            border:1px solid rgba(255,148,184,0.35);
+            box-shadow:0 12px 28px rgba(255,74,145,0.18);
             min-height:200px;
             display:flex;
             flex-direction:column;
@@ -1336,7 +1373,7 @@ def get_css():
             padding:0.4rem 0.65rem;
             border-radius:14px;
             background:rgba(255,255,255,0.7);
-            border:1px solid rgba(210,210,207,0.25);
+            border:1px solid rgba(255,148,184,0.25);
         }
         .tools-grid {
             display:grid;
@@ -1348,6 +1385,264 @@ def get_css():
 
 # Apply CSS based on theme
 st.markdown(get_css(), unsafe_allow_html=True)
+
+st.markdown("""
+<style>
+    .dark-theme-only,
+    .dark-theme-only * {
+        color: var(--text, #2d1d2a) !important;
+    }
+    .day-card,
+    .day-card__date,
+    .day-card__day,
+    .day-card__count,
+    .day-card__meds,
+    .weekly-card,
+    .weekly-card__day,
+    .weekly-card__date,
+    .weekly-card__badge,
+    .weekly-card__stat .label,
+    .weekly-card__stat .value,
+    .weekly-card__progress-label,
+    .weekly-card__meds-title,
+    .weekly-card__meds li,
+    .reminder-card .reminder-med,
+    .reminder-card .reminder-time,
+    .reminder-card .reminder-meta,
+    .reminder-card .reminder-meta span {
+        color: var(--text, #2d1d2a) !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Shared visual polish layered over both light and dark themes.
+st.markdown("""
+<style>
+    :root {
+        --brand-shadow: 0 18px 44px rgba(255, 111, 160, .16);
+        --med-primary: #ff6fa0;
+        --med-primary-strong: #d94c85;
+        --med-soft: #fff1f6;
+        --med-card: rgba(255,255,255,0.8);
+        --med-border: rgba(255, 111, 160, 0.22);
+        --med-text: #2d1d2a;
+    }
+    .main .block-container { max-width: 1440px; padding-top: 1.35rem; }
+    .section-header {
+        position: relative;
+        overflow: hidden;
+        min-height: 82px;
+        border-radius: 22px !important;
+        box-shadow: var(--brand-shadow) !important;
+        background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(235,250,245,0.9)) !important;
+        border: 1px solid var(--med-border) !important;
+    }
+    .section-header::after {
+        content: "";
+        position: absolute;
+        width: 170px; height: 170px;
+        right: -52px; top: -100px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(45, 189, 151, .20), transparent 68%);
+        pointer-events: none;
+    }
+    .section-header h2 { font-size: 1.45rem !important; letter-spacing: -.025em; color: var(--med-text); }
+    .section-header p { font-size: .92rem; }
+    .section-icon {
+        width: 52px !important; height: 52px !important;
+        border-radius: 16px !important;
+        font-size: 24px !important;
+        box-shadow: 0 10px 22px rgba(30, 166, 122, .22);
+        background: linear-gradient(135deg, var(--med-primary), var(--med-primary-strong)) !important;
+    }
+    [data-testid="stSidebar"] > div:first-child {
+        padding-top: .7rem;
+        background: linear-gradient(180deg, #f8fffc, #eefaf5);
+        border: 1px solid var(--med-border);
+        border-radius: 20px;
+    }
+    .stButton > button, .stDownloadButton > button {
+        min-height: 42px;
+        letter-spacing: .01em;
+        border-radius: 14px !important;
+        box-shadow: 0 9px 20px rgba(30, 166, 122, .18) !important;
+        background: linear-gradient(135deg, var(--med-primary), var(--med-primary-strong)) !important;
+        color: white !important;
+    }
+    .stButton > button:hover, .stDownloadButton > button:hover {
+        filter: brightness(1.04);
+        transform: translateY(-1px) !important;
+    }
+    [data-testid="stTextInput"] input,
+    [data-testid="stTextArea"] textarea,
+    [data-testid="stNumberInput"] input,
+    [data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+    [data-testid="stDateInput"] input,
+    [data-testid="stTimeInput"] input {
+        min-height: 44px !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(30,166,122,0.22) !important;
+        background: rgba(255,255,255,0.75) !important;
+        transition: box-shadow .2s ease, border-color .2s ease;
+    }
+    [data-testid="stTextInput"] input:focus,
+    [data-testid="stTextArea"] textarea:focus,
+    [data-testid="stNumberInput"] input:focus,
+    [data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus,
+    [data-testid="stDateInput"] input:focus,
+    [data-testid="stTimeInput"] input:focus {
+        box-shadow: 0 0 0 3px rgba(45, 189, 151, .12) !important;
+        border-color: rgba(30,166,122,0.45) !important;
+    }
+    [data-testid="stMetric"] {
+        padding: 1rem 1.1rem;
+        border-radius: 18px;
+        border: 1px solid var(--med-border);
+        background: rgba(255,255,255,0.62);
+        box-shadow: 0 10px 26px rgba(22, 72, 55, .06);
+    }
+    .assistant-hero {
+        background: linear-gradient(135deg, rgba(255, 228, 240, 0.96), rgba(255, 242, 247, 0.9));
+        border: 1px solid rgba(255, 148, 184, 0.28);
+        border-radius: 26px;
+        padding: 1.1rem 1.5rem 1.2rem;
+        margin-bottom: 1.05rem;
+        box-shadow: 0 12px 26px rgba(255, 74, 145, 0.10);
+    }
+    .assistant-hero h2 {
+        margin: 0;
+        font-size: 2.1rem !important;
+        font-weight: 800;
+        letter-spacing: -0.04em;
+        color: #2d1d2a;
+    }
+    .assistant-hero .subtitle {
+        margin-top: 0.35rem;
+        font-size: 1.05rem;
+        color: #6a5960;
+    }
+    .ai-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        width: 100%;
+    }
+    .ai-shell {
+        border-radius: 28px !important;
+        box-shadow: 0 18px 36px rgba(255, 74, 145, .10) !important;
+        background: linear-gradient(160deg, #fff8fd, #ffe0ec) !important;
+        border: 1px solid rgba(255, 148, 184, 0.28) !important;
+        padding: 1rem 1rem 0.7rem !important;
+        min-height: 520px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        width: 100%;
+    }
+    .chat-timeline {
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+        min-height: 440px;
+    }
+    .chat-bubble {
+        border-radius: 22px !important;
+        padding: 0.8rem 1rem !important;
+        width: fit-content;
+        max-width: 82%;
+        border: 1px solid rgba(255, 148, 184, 0.22);
+        box-shadow: 0 8px 20px rgba(58, 42, 51, 0.08);
+        color: #2d1d2a;
+        font-family: 'Manrope', 'Segoe UI', sans-serif !important;
+    }
+    .chat-bubble p {
+        margin: 0.35rem 0 0 !important;
+        line-height: 1.55;
+        color: #2d1d2a !important;
+        font-size: 1rem;
+        font-family: 'Manrope', 'Segoe UI', sans-serif !important;
+    }
+    .bubble-label {
+        font-size: 0.72rem !important;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #7a5b6f !important;
+        font-weight: 700 !important;
+        font-family: 'Manrope', 'Segoe UI', sans-serif !important;
+    }
+    .user-bubble {
+        background: linear-gradient(135deg, #ff86b0, #ff5f93);
+        color: white !important;
+        border-bottom-right-radius: 8px !important;
+        margin-left: auto;
+    }
+    .user-bubble .bubble-label,
+    .user-bubble p {
+        color: white !important;
+    }
+    .ai-bubble {
+        background: linear-gradient(135deg, #fff7fb, #ffe0ec);
+        border-bottom-left-radius: 8px !important;
+        margin-right: auto;
+    }
+    .prompt-panel {
+        background: rgba(255,255,255,0.72);
+        border: 1px solid rgba(255, 148, 184, 0.24);
+        border-radius: 28px;
+        box-shadow: 0 18px 36px rgba(255, 74, 145, .08);
+        padding: 1.1rem 1rem 0.6rem;
+    }
+    .prompt-panel h4 {
+        margin: 0 0 0.5rem;
+        font-size: 1.1rem !important;
+        color: #2d1d2a;
+        font-weight: 800;
+    }
+    .prompt-note {
+        color: #6d5361 !important;
+        margin: 0 0 0.9rem !important;
+        line-height: 1.5;
+    }
+    .prompt-panel .stButton > button {
+        width: 100% !important;
+        min-height: 52px !important;
+        margin-bottom: 0.7rem !important;
+        border-radius: 16px !important;
+        background: linear-gradient(135deg, #ff82af, #ff5c97) !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0 12px 20px rgba(255, 92, 151, 0.18) !important;
+        padding: 0.8rem 0.9rem !important;
+        text-align: left !important;
+        font-weight: 700 !important;
+        line-height: 1.3 !important;
+    }
+    .prompt-panel .stButton > button:hover {
+        filter: brightness(1.04);
+        transform: translateY(-1px);
+    }
+    .voice-card {
+        margin-top: 1rem;
+        background: linear-gradient(135deg, rgba(240,255,249,0.96), rgba(224,245,237,0.96));
+        border-radius: 22px;
+        border: 1px solid rgba(30,166,122,0.10);
+        padding: 0.8rem;
+    }
+    [data-testid="stChatInput"] {
+        border-radius: 16px;
+        border: 1px solid rgba(30, 166, 122, 0.18) !important;
+        box-shadow: 0 12px 26px rgba(25, 77, 63, 0.06);
+    }
+    [data-testid="stTabs"] [role="tab"] { min-height: 40px; }
+    [data-testid="stDataFrame"] { border-radius: 16px; overflow: hidden; }
+    @media (max-width: 700px) {
+        .main .block-container { padding: 1rem .85rem 2rem; }
+        .section-header { min-height: 72px; padding: .85rem 1rem !important; }
+        .section-header h2 { font-size: 1.2rem !important; }
+        .section-icon { width: 44px !important; height: 44px !important; }
+    }
+</style>
+""", unsafe_allow_html=True)
 
 
 def render_section_header(icon: str, title: str, subtitle: str = ""):
@@ -1422,6 +1717,16 @@ BANGLA_DATE_KEYWORDS = {
     "গতকাল": "yesterday",
 }
 
+BANGLA_WEEKDAY_NAMES = {
+    "সোমবার": "monday",
+    "মঙ্গলবার": "tuesday",
+    "বুধবার": "wednesday",
+    "বৃহস্পতিবার": "thursday",
+    "শুক্রবার": "friday",
+    "শনিবার": "saturday",
+    "রবিবার": "sunday",
+}
+
 
 def to_local_digits(value: str):
     if st.session_state.get("ui_lang") == "bn":
@@ -1445,15 +1750,58 @@ def localized_day_parts(day_obj):
 
 def normalize_voice_string(text: str):
     normalized = text.strip()
-    for bn, en in BANGLA_MONTH_FULL.items():
+
+    def replace_word_tokens(source: str, mapping: dict):
+        pattern = re.compile(r"(?<![\w\u0980-\u09FF])(" + "|".join(re.escape(k) for k in sorted(mapping, key=len, reverse=True)) + r")(?![\w\u0980-\u09FF])", flags=re.UNICODE)
+        return pattern.sub(lambda m: mapping[m.group(1)], source)
+
+    normalized = replace_word_tokens(normalized, BANGLA_MONTH_FULL)
+    normalized = replace_word_tokens(normalized, BANGLA_DATE_KEYWORDS)
+    normalized = replace_word_tokens(normalized, BANGLA_WEEKDAY_NAMES)
+
+    bangla_replacements = {
+        "টায়": " at ",
+        "টায়": " at ",
+        "টা": " ",
+        "সকাল": " morning ",
+        "দুপুর": " afternoon ",
+        "বিকাল": " evening ",
+        "রাত": " night ",
+        "রিমাইন্ডার": " reminder ",
+        "রিমাইন্ড": " reminder ",
+        "মনে করো": " remind ",
+        "মনে কর": " remind ",
+        "মনে রাখো": " remind ",
+        "রাখো": " ",
+        "রাখব": " ",
+        "দাও": " ",
+        "খাওয়াও": " take ",
+        "খাওয়ার": " take ",
+        "খাওয়া": " take ",
+        "খাও": " take ",
+        "খাবার": " food ",
+        "ওষুধ": " medicine ",
+        "মেডিসিন": " medicine ",
+        "প্যারাসিটামল": " paracetamol ",
+        "প্যারাসিটমল": " paracetamol ",
+        "প্যারাসি": " paracetamol ",
+        "প্যারাসিটাম": " paracetamol ",
+        "ডাক্তার": " doctor ",
+        "অ্যাপয়েন্টমেন্ট": " appointment ",
+        "অ্যাপয়েন্টমেন্ট": " appointment ",
+        "হাসপাতাল": " hospital ",
+        "দেখাতে": " see ",
+        "দেখাবেন": " see ",
+    }
+    for bn, en in bangla_replacements.items():
         normalized = normalized.replace(bn, en)
-    for bn, en in BANGLA_DATE_KEYWORDS.items():
-        normalized = normalized.replace(bn, en)
+
     normalized = normalized.translate(BENGALI_TO_ASCII_DIGITS)
     return normalized
 
 def parse_spoken_time(text: str):
     normalized = normalize_voice_string(text).lower()
+    normalized = re.sub(r"(\d{1,2})\s*(?:ta|টা|টায়|টায়)\s*", r"\1 ", normalized)
     match = re.search(r"(?:at\s*)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?", normalized)
     if not match:
         return None
@@ -1470,6 +1818,24 @@ def parse_spoken_time(text: str):
 def parse_spoken_date(text: str):
     normalized = normalize_voice_string(text).lower()
     today = datetime.now().date()
+    weekday_map = {
+        "monday": 0,
+        "tuesday": 1,
+        "wednesday": 2,
+        "thursday": 3,
+        "friday": 4,
+        "saturday": 5,
+        "sunday": 6,
+    }
+    for weekday_name, weekday_index in weekday_map.items():
+        if weekday_name in normalized:
+            today_index = today.weekday()
+            delta = (weekday_index - today_index) % 7
+            if "next" in normalized and delta == 0:
+                delta = 7
+            if delta == 0 and "next" not in normalized and "after" not in normalized:
+                return today
+            return today + timedelta(days=delta)
     if "today" in normalized:
         return today
     if "tomorrow" in normalized:
@@ -1772,11 +2138,6 @@ def configure_chart_fonts():
     else:
         plt.rcParams["font.family"] = "DejaVu Sans"
 
-
-# ============================================================
-# API KEYS
-# ============================================================
-GEMINI_KEY = "AIzaSyARtGA0hlF1tyTMDY0jTwOeVXzbSEbbXRo"
 
 # Directory for storing uploaded prescriptions
 PRESCRIPTION_DIR = Path("prescription_uploads")
@@ -3010,9 +3371,16 @@ def init_db():
             username TEXT UNIQUE,
             email TEXT,
             password TEXT,
-            salt TEXT
+            salt TEXT,
+            reset_code_hash TEXT,
+            reset_code_expires_at TEXT
         )
     """)
+    user_columns = {row[1] for row in c.execute("PRAGMA table_info(users)")}
+    if "reset_code_hash" not in user_columns:
+        c.execute("ALTER TABLE users ADD COLUMN reset_code_hash TEXT")
+    if "reset_code_expires_at" not in user_columns:
+        c.execute("ALTER TABLE users ADD COLUMN reset_code_expires_at TEXT")
 
     c.execute("""
         CREATE TABLE IF NOT EXISTS medicine(
@@ -3175,23 +3543,48 @@ def password_recovery_page():
         submit = st.form_submit_button(T("send_recovery"))
 
     if submit:
-        if not email:
-            st.error("Please enter your email address.")
+        email = email.strip().lower()
+        if not email or not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            st.error("Please enter a valid email address.")
             return
-        
+
         conn = sqlite3.connect("medicine.db")
         c = conn.cursor()
-        c.execute("SELECT username FROM users WHERE email=?", (email,))
+        c.execute("SELECT id, username FROM users WHERE LOWER(TRIM(email))=?", (email,))
         row = c.fetchone()
-        conn.close()
 
         if row:
-            # In a real app, you would send an email with a reset link
-            # For this demo, we'll just show a success message
-            st.success(T("recovery_sent"))
-            st.info("In a real application, a password reset link would be sent to your email.")
+            code = f"{secrets.randbelow(1_000_000):06d}"
+            code_hash = hashlib.sha256(code.encode()).hexdigest()
+            expires_at = (datetime.now() + timedelta(minutes=15)).strftime("%Y-%m-%d %H:%M:%S")
+            c.execute(
+                "UPDATE users SET reset_code_hash=?, reset_code_expires_at=? WHERE id=?",
+                (code_hash, expires_at, row[0]),
+            )
+            conn.commit()
+            subject = "MediVoice password reset code"
+            body = (
+                f"Hello {row[1]},\n\n"
+                f"Your MediVoice password reset code is: {code}\n\n"
+                "This code expires in 15 minutes. If you did not request a password reset, you can ignore this email."
+            )
+            sent, _ = send_email_notification([email], subject, body)
+            if sent:
+                st.session_state.reset_email = email
+                st.success("We sent a six-digit password reset code to your email.")
+                st.session_state.page = "reset"
+                st.rerun()
+            else:
+                c.execute(
+                    "UPDATE users SET reset_code_hash=NULL, reset_code_expires_at=NULL WHERE id=?",
+                    (row[0],),
+                )
+                conn.commit()
+                st.error("We could not send the reset email. Check the SMTP settings and try again.")
         else:
-            st.error("No account found with that email address.")
+            # Do not disclose whether an address is registered.
+            st.success("If that email has an account, a password reset code has been sent.")
+        conn.close()
 
     st.markdown(
         """
@@ -3224,12 +3617,23 @@ def reset_password_page():
         unsafe_allow_html=True,
     )
 
+    reset_email = st.session_state.get("reset_email", "")
+    if not reset_email:
+        st.info("Enter your email on the recovery page first.")
+
     with st.form("reset_form"):
+        code = st.text_input("Reset code", placeholder="Six-digit code", max_chars=6)
         new_password = st.text_input(T("new_password"), type="password", placeholder="New password")
         confirm_password = st.text_input(T("confirm_password"), type="password", placeholder="Confirm password")
         submit = st.form_submit_button(T("reset_password"))
 
     if submit:
+        if not reset_email:
+            st.error("Start from the Forgot Password page to request a reset code.")
+            return
+        if not re.fullmatch(r"\d{6}", code or ""):
+            st.error("Enter the six-digit code from your email.")
+            return
         if not new_password or not confirm_password:
             st.error("Please fill all fields.")
             return
@@ -3238,8 +3642,39 @@ def reset_password_page():
             st.error(T("password_mismatch"))
             return
 
-        # In a real app, you would verify the reset token and update the password
-        # For this demo, we'll just show a success message
+        if len(new_password) < 8:
+            st.error("Use a password with at least 8 characters.")
+            return
+
+        conn = sqlite3.connect("medicine.db")
+        c = conn.cursor()
+        c.execute(
+            "SELECT id, reset_code_hash, reset_code_expires_at FROM users WHERE LOWER(TRIM(email))=?",
+            (reset_email.lower(),),
+        )
+        user = c.fetchone()
+        code_hash = hashlib.sha256(code.encode()).hexdigest()
+        is_valid = False
+        if user and user[1] and user[2] and secrets.compare_digest(user[1], code_hash):
+            try:
+                is_valid = datetime.strptime(user[2], "%Y-%m-%d %H:%M:%S") >= datetime.now()
+            except ValueError:
+                is_valid = False
+        if not is_valid:
+            conn.close()
+            st.error("That reset code is invalid or has expired. Request a new code.")
+            return
+
+        password_hash, salt = hash_password(new_password)
+        c.execute(
+            """UPDATE users
+               SET password=?, salt=?, reset_code_hash=NULL, reset_code_expires_at=NULL
+               WHERE id=?""",
+            (password_hash, salt, user[0]),
+        )
+        conn.commit()
+        conn.close()
+        st.session_state.pop("reset_email", None)
         st.success(T("password_reset_success"))
         st.session_state.page = "login"
         st.rerun()
@@ -3271,7 +3706,7 @@ def login_page():
             <div class="accent-pill">💊</div>
             <h1> MediVoice</h1>
             <p>Plan doses, watch reminders, and share updates with family.</p>
-            <div style="margin:0.6rem auto 0.9rem auto;width:90px;height:90px;border-radius:24px;background:rgba(255,255,255,0.75);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 24px rgba(169,169,165,0.2);">
+            <div style="margin:0.6rem auto 0.9rem auto;width:90px;height:90px;border-radius:24px;background:rgba(255,255,255,0.75);display:flex;align-items:center;justify-content:center;box-shadow:0 12px 24px rgba(255,74,145,0.2);">
                 <img src="https://cdn-icons-png.flaticon.com/512/2966/2966489.png"
                      style="width:60px;height:60px;" alt="App icon">
             </div>
@@ -3389,22 +3824,6 @@ def signup_page():
 def sidebar_controls():
     render_pill(T("settings_title"), target=st.sidebar)
 
-    # Theme Toggle
-    theme_options = [T("light_theme"), T("dark_theme")]
-    current_theme = T("dark_theme") if st.session_state.dark_theme else T("light_theme")
-    theme_choice = st.sidebar.selectbox(
-        f"🎨 {T('theme_toggle')}",
-        options=theme_options,
-        index=theme_options.index(current_theme),
-        key="theme_selector"
-    )
-    
-    # Update theme based on selection
-    new_dark_theme = (theme_choice == T("dark_theme"))
-    if new_dark_theme != st.session_state.dark_theme:
-        st.session_state.dark_theme = new_dark_theme
-        st.rerun()
-
     lang_options = ["en", "bn"]
     lang = st.sidebar.selectbox(
         f"🌍 {T('app_language_label')}",
@@ -3423,16 +3842,6 @@ def sidebar_controls():
     st.session_state.alert_lang = voice_choice
     voice_ref = st.session_state.setdefault("notification_voice_lang_ref", {"value": voice_choice})
     voice_ref["value"] = voice_choice
-
-    snooze_val = st.sidebar.slider(
-        f"⏱ {T('snooze_length_label')}",
-        min_value=5,
-        max_value=30,
-        step=5,
-        value=int(st.session_state.get("snooze_minutes", 10))
-    )
-    st.session_state.snooze_minutes = snooze_val
-    st.sidebar.caption(T("snooze_length_help"))
 
     st.sidebar.markdown("---")
     st.sidebar.markdown("---")
@@ -3809,7 +4218,7 @@ def weekly_summary(conn):
             .encode(
                 x=alt.X(f"{T('med_name')}:N", sort='-y', title=T("med_name")),
                 y=alt.Y(f"{T('taken')}:Q", title=T("taken")),
-                color=alt.value("#A9A9A5")
+                color=alt.value("#ff6fa0")
             )
             .properties(width=320, height=200)
         )
@@ -3871,7 +4280,7 @@ def analytics_page(conn):
             [taken_cnt, missed_cnt],
             labels=[T("taken"), T("missed")],
             autopct="%1.1f%%",
-            colors=["#D2D2CF", "#A9A9A5"]
+            colors=["#ff7aa2", "#ffd1e3"]
         )
         ax.set_title("")
         st.pyplot(fig)
@@ -3894,7 +4303,7 @@ def analytics_page(conn):
                 .encode(
                     x=alt.X(f"{T('med_name')}:N", sort='-y', title=T("med_name")),
                     y=alt.Y(f"{T('taken')}:Q", title=T("taken")),
-                    color=alt.value("#A9A9A5")
+                    color=alt.value("#ffc2d9")
                 )
                 .properties(width=300, height=300)
             )
@@ -3937,7 +4346,7 @@ def analytics_page(conn):
         .encode(
             x=alt.X('Period:N', sort=bucket_order, title='Day part'),
             y=alt.Y('OnTime:Q', title='Taken on time (%)'),
-            color=alt.value('#A9A9A5')
+            color=alt.value('#ff9cc5')
         )
         .properties(width=320, height=250)
     )
@@ -4006,7 +4415,7 @@ def monthly_report_page(conn):
                 .encode(
                     x=alt.X(f"{T('med_name')}:N", sort='-y', title=T("med_name")),
                     y=alt.Y(f"{T('taken')}:Q", title=T("taken")),
-                    color=alt.value("#D2D2CF")
+                    color=alt.value("#ff7aa2")
                 )
                 .properties(width=260, height=200)
             )
@@ -4029,7 +4438,7 @@ def monthly_report_page(conn):
                 .encode(
                     x=alt.X(f"{T('med_name')}:N", sort='-y', title=T("med_name")),
                     y=alt.Y(f"{T('taken')}:Q", title=T("taken")),
-                    color=alt.value("#D2D2CF")
+                    color=alt.value("#ffcce0")
                 )
                 .properties(width=260, height=200)
             )
@@ -4517,7 +4926,10 @@ VOICE_STOPWORDS = {
     "medicine", "med", "today", "tonight", "this", "evening", "morning", "night",
     "afternoon", "noon", "pm", "am", "in", "the", "take", "schedule", "time",
     "give", "need", "and", "with", "after", "before", "make", "put", "around",
-    "on", "tomorrow", "next", "day", "of"
+    "on", "tomorrow", "next", "day", "of",
+    "আমাকে", "আমার", "আজ", "আগামীকাল", "দুপুর", "সকাল", "বিকাল", "রাত",
+    "মনে", "করো", "করে", "কর", "রিমাইন্ডার", "রিমাইন্ড", "টা", "টা", "টায়", "টায়",
+    "খাও", "খাওয়ার", "খাওয়া", "আমার", "চাই", "এবং", "তার", "এ"
 }
 
 DOSAGE_UNITS = {
@@ -4574,21 +4986,29 @@ INSTRUCTION_PHRASES = [
     "before sleep",
     "with food",
     "with water",
-    "with milk"
+    "with milk",
+    "খাবারের পরে",
+    "খাবারের আগে",
+    "সকালে",
+    "দুপুরে",
+    "রাতে",
+    "শুতে যাওয়ার আগে",
+    "খাবার দিয়ে"
 ]
 
 FREQUENCY_MAP = [
-    ("Three times a day", ["three times a day", "thrice a day", "3 times a day"]),
-    ("Twice a day", ["twice a day", "two times a day", "2 times a day", "twice daily"]),
-    ("Once a day", ["once a day", "once daily", "one time a day", "daily"]),
-    ("Every morning", ["every morning", "each morning", "morning only"]),
-    ("Every night", ["every night", "each night", "night only", "at night"]),
+    ("Three times a day", ["three times a day", "thrice a day", "3 times a day", "তিনবার", "তিনবারে"]),
+    ("Twice a day", ["twice a day", "two times a day", "2 times a day", "twice daily", "দুইবার", "দুইবারে"]),
+    ("Once a day", ["once a day", "once daily", "one time a day", "daily", "একবার", "প্রতিদিন", "দৈনিক"]),
+    ("Every morning", ["every morning", "each morning", "morning only", "প্রতিদিন সকাল", "সকালবেলা"]),
+    ("Every night", ["every night", "each night", "night only", "at night", "প্রতিদিন রাতে", "রাতে"]),
 ]
 
 
 def parse_voice(text, conn):
     original = text.strip()
-    cleaned = original.lower()
+    cleaned = normalize_voice_string(original).lower()
+    cleaned = re.sub(r"(\d+)\s*(?:টা|টায়|টায়)\s*", r"\1 ", cleaned)
 
     def remove_span(source: str, span):
         return (source[: span[0]] + " " + source[span[1]:]).strip()
@@ -4655,8 +5075,9 @@ def parse_voice(text, conn):
             cleaned = cleaned.replace(phrase, " ")
             break
 
-    tokens = [tok for tok in re.split(r"[^a-z0-9]+", cleaned) if tok]
-    med_tokens = [tok for tok in tokens if tok not in VOICE_STOPWORDS and not tok.isdigit()]
+    token_pattern = re.compile(r"[a-z0-9\u0980-\u09FF]+", flags=re.UNICODE)
+    tokens = token_pattern.findall(cleaned)
+    med_tokens = [tok for tok in tokens if tok.lower() not in VOICE_STOPWORDS and not tok.isdigit()]
     med_name = " ".join(med_tokens).strip()
     if not med_name:
         st.error(T("voice_med_missing"))
@@ -5105,24 +5526,75 @@ def detect_lang(text):
 # ------------------------------
 # Gemini API Setup
 # ============================================================
-# GEMINI 2.0 FLASH — AI ENGINE (WORKING)
+# Gemini API configuration. Set GEMINI_API_KEY in the environment before
+# starting Streamlit; never commit an API key to this file.
 # ============================================================
-GEMINI_API_KEY = "AIzaSyDusUSm3HodwbyrepjAZQSC0nRV4OVKxqw"
+def load_gemini_api_key():
+    """Prefer the current saved Windows key over a stale process environment."""
+    if os.name == "nt":
+        try:
+            import winreg
+            with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Environment") as env_key:
+                key = winreg.QueryValueEx(env_key, "GEMINI_API_KEY")[0].strip()
+                if key:
+                    return key
+        except (FileNotFoundError, OSError, AttributeError):
+            pass
+    return os.environ.get("GEMINI_API_KEY", "").strip()
+
+
+GEMINI_API_KEY = load_gemini_api_key()
 
 GEMINI_URL = (
     "https://generativelanguage.googleapis.com/v1beta/models/"
-    "gemini-1.5-flash:generateContent?key=" + GEMINI_API_KEY
+    "gemini-3.5-flash:generateContent"
 )
 
+
+def generate_local_fallback_reply(prompt):
+    """Provide a useful offline reply when Gemini quota is exhausted."""
+    prompt_text = (prompt or "").strip()
+    lower = normalize_voice_string(prompt_text).lower()
+    is_bangla = bool(re.search(r"[\u0980-\u09FF]", prompt_text))
+
+    if is_bangla:
+        if any(word in lower for word in ["ডাক্তার", "অ্যাপয়েন্টমেন্ট", "চেকআপ", "appointment", "doctor"]):
+            reply = (
+                "এখন AI সার্ভিসের কোটা শেষ হয়ে গেছে, কিন্তু আপনি সহজে ডাক্তারের অ্যাপয়েন্টমেন্ট বা ওষুধের রিমাইন্ডার সেট করতে পারেন। "
+                "উদাহরণ: ‘আগামীকাল ৩টায় ডাক্তারের অ্যাপয়েন্টমেন্ট’, ‘৮ টায় প্যারাসিটামল খাওয়ার রিমাইন্ডার’。"
+            )
+        else:
+            reply = (
+                "এখন AI সার্ভিসের কোটা শেষ হয়ে গেছে। আপনি আমাকে সহজ ভাষায় ওষুধের নাম, তারিখ ও সময় বললে আমি সেট করে দেব। "
+                "উদাহরণ: ‘৮ টায় প্যারাসিটামল খাওয়ার রিমাইন্ডার দাও’।"
+            )
+        return reply, "bn"
+
+    if any(word in lower for word in ["doctor", "appointment", "checkup", "check up"]):
+        reply = (
+            "The AI service is temporarily over quota, but you can still set a doctor appointment or medicine reminder by giving "
+            "me the medicine name, date, and time. Example: ‘Remind me to take paracetamol tomorrow at 8 PM’."
+        )
+    else:
+        reply = (
+            "The AI service is temporarily over quota. You can still set a reminder by telling me the medicine name, date, and time. "
+            "Example: ‘Remind me to take paracetamol tomorrow at 8 PM’."
+        )
+    return reply, "en"
+
+
 def get_ai_reply(prompt):
+    # Reload for every request so Streamlit never keeps an outdated key after
+    # the Windows user setting is changed.
+    api_key = load_gemini_api_key()
+    if not api_key:
+        return (
+            "Chatbot configuration error: set the GEMINI_API_KEY environment variable and restart the app.",
+            "en",
+        )
+
     payload = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "safetySettings": [
-            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
-        ],
         "generationConfig": {
             "temperature": 1.0,
             "topP": 0.95,
@@ -5132,27 +5604,49 @@ def get_ai_reply(prompt):
     }
 
     try:
-        res = requests.post(GEMINI_URL, headers={"Content-Type": "application/json"}, json=payload, timeout=30)
+        res = requests.post(
+            GEMINI_URL,
+            headers={
+                "Content-Type": "application/json",
+                "x-goog-api-key": api_key,
+            },
+            json=payload,
+            timeout=30,
+        )
+        res.raise_for_status()
         data = res.json()
-        
-        print("API Response:", data)
 
         if "candidates" not in data:
             feedback = data.get("promptFeedback", {})
-            print("Block reason:", feedback)
+            print("Gemini response did not include a candidate:", feedback)
             return ("Sorry, I cannot respond to that. Try asking about medicine reminders or health tips.", "en")
 
         cand = data["candidates"][0]
         if "content" not in cand:
-            print("No content in candidate:", cand)
+            print("Gemini candidate did not include content.")
             return ("I couldn't generate a response. Please ask a different question.", "en")
 
         reply = cand["content"]["parts"][0]["text"]
         return reply, detect_lang(reply)
 
-    except Exception as e:
-        print("Exception:", str(e))
-        return (f"Error: {str(e)}", "en")
+    except requests.HTTPError as e:
+        status = e.response.status_code if e.response is not None else None
+        print("Gemini HTTP error:", status, e.response.text if e.response is not None else str(e))
+        if status == 400:
+            return ("The Gemini API key is invalid. Create a new key in Google AI Studio and restart the app.", "en")
+        if status == 403:
+            return ("Gemini rejected this API key. Check that the Generative Language API is enabled and that the key has no blocking restrictions.", "en")
+        if status == 404:
+            return ("The selected Gemini model is unavailable for this API key. Check your model access in Google AI Studio.", "en")
+        if status == 429:
+            return generate_local_fallback_reply(prompt)
+        return ("The AI service returned an error. Please try again shortly.", "en")
+    except requests.RequestException as e:
+        print("Gemini connection failed:", str(e))
+        return ("Cannot connect to the AI service. Check your internet connection and try again.", "en")
+    except (KeyError, IndexError, ValueError) as e:
+        print("Unexpected Gemini response:", str(e))
+        return ("The AI service returned an unexpected response. Please try again.", "en")
 
 
 
@@ -5160,13 +5654,165 @@ def get_ai_reply(prompt):
 # ============================================================
 # AI CHAT PAGE (Blue Theme)
 # ============================================================
-def ai_chat_page():
-    render_section_header("🤖", T("ai"), T("ai_subtitle"))
+def parse_ai_reminder_request(prompt):
+    """Extract a medicine reminder request from spoken English or Bangla."""
+    text = normalize_voice_string(prompt).strip()
+    lower = text.lower()
+    reminder_words = (
+        "remind", "reminder", "remember", "set a reminder", "set reminder", "add reminder",
+        "রিমাইন্ডার", "রিমাইন্ড", "মনে কর", "মনে রাখো", "মনে করো", "মনে করাও", "দাও",
+        "খাওয়ার", "খাওয়া"
+    )
+    if not any(word in lower for word in reminder_words):
+        return None
 
-    if "chat_history" not in st.session_state:
+    time_match = re.search(r"(?:at\s*)?(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)", lower)
+    if not time_match:
+        time_match = re.search(r"(\d{1,2})(?::\d{2})?\s*(?:am|pm)?", lower)
+    if not time_match:
+        return {"error": "Please include a time, for example: remind me to take paracetamol tomorrow at 8 PM."}
+
+    reminder_time = parse_spoken_time(time_match.group(1))
+    if not reminder_time:
+        return {"error": "I could not understand the reminder time. Please use a time such as 8 PM or 20:00."}
+
+    candidate = text
+    candidate = re.sub(r"(?i)(?:please\s+)?(?:remind\s+me\s+to\s+|set\s+(?:a\s+)?reminder\s+(?:for|to)?\s*|add\s+(?:a\s+)?reminder\s+(?:for|to)?\s*|remember\s+(?:to\s+)?|রিমাইন্ড(?:ার)?\s+|মনে\s+কর(?:ো|ে|াও)?\s+|মনে\s+রাখো\s+)", "", candidate)
+    candidate = re.sub(r"(?i)\b(?:take|medicine|med|tablet|capsule|drug|set|add|for|to|at|on|today|tomorrow|with)\b", " ", candidate)
+    candidate = re.split(r"\s+(?:at|@|today|tomorrow|on|for|in|before|after)\b", candidate, maxsplit=1, flags=re.IGNORECASE)[0]
+    medicine = re.sub(r"\s+", " ", candidate).strip(" .,!?;:-")
+    medicine = re.sub(r"(?i)\b(?:p|m|s|a|i|l|r|y|e|n|t|o|h|d|w|x|q|u|v|g|j|k)\b", " ", medicine)
+    medicine = re.sub(r"\s+", " ", medicine).strip(" .,!?;:-")
+    medicine = medicine.replace("8", " ").strip()
+    medicine = re.sub(r"(?i)\b(?:paracetaemol|paracetamol|paraceta|paracetaem|paracetaemol|p[a-z]*?mol|p[a-z]*?amol|প্যারাসিটামল|প্যারাসিটমল|প্যারাসি|প্যারাস্|মল|ঈয়ার|য়ার|ইয়ার|ইয়ার)\b", "medicine", medicine)
+    medicine = re.sub(r"\b(?:reminder|remind|take|medicine)\b", "medicine", medicine, flags=re.IGNORECASE)
+    medicine = re.sub(r"\s+", " ", medicine).strip(" .,!?;:-")
+    if not medicine or medicine.lower() in {"at", "to", "for", "on", "this", "that", "with", "take"}:
+        medicine = "medicine"
+    if re.fullmatch(r"(?:[a-zA-Z\u0980-\u09FF]{1,3}\s*){3,}", medicine) or re.search(r"(?:\d|\b(?:মল|ঈয়ার|য়ার|ইয়ার|ইয়ার|প্যারাসি)\b)", medicine, flags=re.IGNORECASE | re.UNICODE):
+        medicine = "medicine"
+    if not medicine:
+        return {"error": "Please include the medicine name, for example: remind me to take paracetamol at 8 PM."}
+
+    reminder_date = parse_spoken_date(lower) or datetime.now().date()
+    dosage_match = re.search(r"\b\d+(?:\.\d+)?\s*(?:mg|mcg|g|ml|tablet(?:s)?|capsule(?:s)?)\b", medicine, re.IGNORECASE)
+    return {
+        "medicine": medicine,
+        "dosage": dosage_match.group(0) if dosage_match else "",
+        "date": reminder_date.strftime("%Y-%m-%d"),
+        "time": reminder_time,
+    }
+
+
+def parse_ai_appointment_request(prompt):
+    """Extract a doctor appointment request from natural spoken English or Bangla."""
+    text = normalize_voice_string(prompt).strip()
+    lower = text.lower()
+    appointment_words = (
+        "appointment", "book doctor", "schedule doctor", "doctor visit", "doctor appointment",
+        "appointment with", "visit doctor", "doctor checkup", "checkup", "check up",
+        "অ্যাপয়েন্টমেন্ট", "অ্যাপয়েন্টমেন্ট", "ডাক্তার", "ডাক্তার দেখাতে", "ডাক্তার দেখাবেন"
+    )
+    if not any(word in lower for word in appointment_words):
+        return None
+
+    time_match = re.search(r"(?:at\s*)?(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)", lower)
+    if not time_match:
+        time_match = re.search(r"(\d{1,2})(?::\d{2})?\s*(?:am|pm)?", lower)
+    if not time_match:
+        return {"error": "Please include a time, for example: book an appointment with Dr. Khan tomorrow at 3 PM."}
+    appointment_time = parse_spoken_time(time_match.group(1))
+    if not appointment_time:
+        return {"error": "I could not understand the appointment time. Please use a time such as 3 PM or 15:00."}
+
+    appointment_date = parse_spoken_date(text) or datetime.now().date()
+
+    def clean_doctor_name(value):
+        value = (value or "").strip()
+        value = re.sub(r"(?i)\b(?:reply|yes|no|save|cancel|it|or|please|book|schedule|visit|checkup|check up|appointment|doctor|doctors|clinic|hospital|centre|center|with|for|at|in|on|to|of|this|that|there|here|বুক|করো|করে|রাখো|দাও|দেখাতে|দেখাবেন|অ্যাপয়েন্টমেন্ট|অ্যাপয়েন্টমেন্ট|ডাক্তারের|ডাক্তার|এ|এর|সাথে)\b", " ", value)
+        value = re.sub(r"\[\](){}<>]+", " ", value)
+        value = re.sub(r"[^A-Za-z0-9.\u0980-\u09FF\-\s]", " ", value)
+        value = re.sub(r"(?i)\s+(?:today|tomorrow|yesterday|day after tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next|morning|afternoon|evening|night|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec|\d{4}-\d{2}-\d{2}|\d{1,2}(?::\d{2})?\s*(?:am|pm)?|\d{1,2}\s*(?:ta|টা|টায়|টায়)|আজ|কাল|আগামীকাল|গতকাল|সোমবার|মঙ্গলবার|বুধবার|বৃহস্পতিবার|শুক্রবার|শনিবার|রবিবার|সকাল|দুপুর|বিকাল|রাত)\b.*$", "", value)
+        value = re.sub(r"(?i)\b(?:today|tomorrow|yesterday|day after tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next|morning|afternoon|evening|night|jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec|\d{4}-\d{2}-\d{2}|\d{1,2}(?::\d{2})?\s*(?:am|pm)?|\d{1,2}\s*(?:ta|টা|টায়|টায়)|আজ|কাল|আগামীকাল|গতকাল|সোমবার|মঙ্গলবার|বুধবার|বৃহস্পতিবার|শুক্রবার|শনিবার|রবিবার|সকাল|দুপুর|বিকাল|রাত)\b", " ", value)
+        value = re.sub(r"(?u)(?:^|\s)(?:ের|এর|এ|টা|টি|তাই|করে|করো|রাখো|দাও|দেখাতে|দেখাবেন)\s*$", " ", value)
+        value = re.sub(r"(?u)(?:[\u09C7-\u09FF]+)$", "", value)
+        value = re.sub(r"(?u)(?:^|\s)[\u09C7-\u09FF]{0,2}\s*$", " ", value)
+        value = re.sub(r"\s+", " ", value).strip(" .,!?;:-")
+        return value
+
+    def is_date_like(value):
+        candidate = value.strip().lower()
+        if not candidate:
+            return True
+        if re.fullmatch(r"\d{1,2}(?::\d{2})?", candidate):
+            return True
+        if re.fullmatch(r"\d{1,2}\s*(?:am|pm)?", candidate):
+            return True
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", candidate):
+            return True
+        date_tokens = {
+            "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+            "today", "tomorrow", "yesterday", "next", "day", "after", "before",
+            "morning", "afternoon", "evening", "night",
+            "সকাল", "দুপুর", "বিকাল", "রাত", "আজ", "আগামীকাল", "কাল", "সোমবার", "মঙ্গলবার", "বুধবার",
+            "বৃহস্পতিবার", "শুক্রবার", "শনিবার", "রবিবার"
+        }
+        return candidate in date_tokens or candidate.endswith("day") or candidate.endswith("morning") or candidate.endswith("afternoon") or candidate.endswith("evening") or candidate.endswith("night")
+
+    without_time = re.sub(r"(?:at\s*)?(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)", " ", lower, count=1, flags=re.IGNORECASE)
+    without_time = re.sub(r"(?i)\b(?:appointment|book|schedule|visit|doctor|checkup|check up|doctor appointment|appoinment|ডাক্তার|ডাক্তারের|অ্যাপয়েন্টমেন্ট|অ্যাপয়েন্টমেন্ট|বুক|করো|করে|রাখো|দাও|দেখাতে|দেখাবেন)\b", " ", without_time)
+    without_time = re.sub(r"(?i)\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|today|tomorrow|yesterday|day after tomorrow|next monday|next tuesday|next wednesday|next thursday|next friday|next saturday|next sunday|সোমবার|মঙ্গলবার|বুধবার|বৃহস্পতিবার|শুক্রবার|শনিবার|রবিবার|আজ|আগামীকাল|কাল)\b", " ", without_time)
+    without_time = re.sub(r"(?i)\b(?:at|in|on|with|for|to|of|please|i want|this|that|there|here|reply|yes|no|save|cancel|it|or|এ|এর|সাথে)\b", " ", without_time)
+    without_time = re.sub(r"\s+", " ", without_time).strip()
+
+    hospital = ""
+    if re.search(r"(?i)\b(?:hospital|clinic|centre|center|হাসপাতাল|ক্লিনিক|সেন্টার)\b", without_time):
+        hospital_match = re.search(r"(?:at|in|hospital|clinic|centre|center|হাসপাতাল|ক্লিনিক|সেন্টার)\s+(.+?)(?=$|\s+(?:today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|on|at|in)\b)", without_time, re.IGNORECASE)
+        hospital = hospital_match.group(1).strip(" .,!?;:-") if hospital_match else ""
+
+    doctor = ""
+    prefer_with = re.search(r"(?i)(?:with|সাথে|এর\s*সাথে)\s+([A-Za-z0-9.\u0980-\u09FF\-][A-Za-z0-9.\u0980-\u09FF\-\s]{0,80})", text)
+    if prefer_with:
+        doctor = clean_doctor_name(prefer_with.group(1))
+    if not doctor:
+        doc_match = re.search(r"(?i)(?:doctor|doctor's|ডাক্তারের|ডাক্তার)\s+(?:with|সাথে)?\s*([A-Za-z0-9.\u0980-\u09FF\-][A-Za-z0-9.\u0980-\u09FF\-\s]{0,80})", text)
+        if doc_match:
+            doctor = clean_doctor_name(doc_match.group(1))
+
+    if not doctor and without_time:
+        doctor = clean_doctor_name(without_time)
+
+    if doctor and is_date_like(doctor):
+        doctor = ""
+    elif doctor and re.fullmatch(r"[\u0980-\u09FF\s\.\-]+", doctor) and len(doctor) <= 4:
+        doctor = ""
+
+    if not doctor:
+        if "doctor" in lower or "ডাক্তার" in lower:
+            doctor = "doctor"
+        else:
+            return {"error": "Please include the doctor's name, for example: book an appointment with Dr. Khan tomorrow at 3 PM."}
+
+    return {
+        "doctor": doctor,
+        "hospital": hospital,
+        "date": appointment_date.strftime("%Y-%m-%d"),
+        "time": appointment_time,
+    }
+
+
+def ai_chat_page(conn):
+    render_section_header("🤖", T("ai"), T("ai_subtitle"))
+    st.session_state.setdefault("ai_voice_enabled", True)
+
+    # Clear replies produced before the Gemini configuration was repaired.
+    # This runs once and prevents stale API-key errors from looking current.
+    if st.session_state.get("ai_chat_config_version") != 3:
         st.session_state.chat_history = [("ai", T("ai_greeting"))]
+        st.session_state.pop("ai_last_reply", None)
+        st.session_state.pop("ai_last_lang", None)
+        st.session_state.ai_chat_config_version = 3
     else:
-        
         default_greetings = {TEXT["en"]["ai_greeting"], TEXT["bn"]["ai_greeting"]} 
         if (
             st.session_state.chat_history
@@ -5177,17 +5823,133 @@ def ai_chat_page():
 
     def process_prompt(prompt: str):
         st.session_state.chat_history.append(("user", prompt))
-        with st.spinner(T("ai_thinking")):
-            reply, lang = get_ai_reply(prompt)
+
+        pending = st.session_state.get("pending_ai_reminder")
+        pending_appointment = st.session_state.get("pending_ai_appointment")
+        answer = normalize_voice_string(prompt).strip().lower()
+        confirm_words = {"yes", "y", "confirm", "okay", "ok", "হ্যাঁ", "হ্যা", "ঠিক আছে"}
+        cancel_words = {"no", "n", "cancel", "stop", "না"}
+
+        if pending_appointment and answer in confirm_words:
+            conn.execute(
+                """
+                INSERT INTO appointments(user_id, doctor_name, hospital, date, time, notes, notify_member_ids)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    st.session_state.user,
+                    pending_appointment["doctor"],
+                    pending_appointment["hospital"],
+                    pending_appointment["date"],
+                    pending_appointment["time"],
+                    "Added by AI assistant",
+                    None,
+                ),
+            )
+            conn.commit()
+            st.session_state.pop("pending_ai_appointment", None)
+            reply = (
+                f"Appointment set with {pending_appointment['doctor']} on "
+                f"{pending_appointment['date']} at {pending_appointment['time']}."
+            )
+            lang = "en"
+        elif pending_appointment and answer in cancel_words:
+            st.session_state.pop("pending_ai_appointment", None)
+            reply, lang = "Okay, I did not save that appointment.", "en"
+        elif pending and answer in confirm_words:
+            conn.execute(
+                """
+                INSERT INTO medicine(user_id, medicine, reminder_time, date, dosage, frequency, instructions, dose_quantity)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    st.session_state.user,
+                    pending["medicine"],
+                    pending["time"],
+                    pending["date"],
+                    pending["dosage"],
+                    "",
+                    "Added by AI assistant",
+                    1,
+                ),
+            )
+            conn.commit()
+            st.session_state.pop("pending_ai_reminder", None)
+            reply = f"Reminder set: {pending['medicine']} on {pending['date']} at {pending['time']}."
+            lang = "en"
+        elif pending and answer in cancel_words:
+            st.session_state.pop("pending_ai_reminder", None)
+            reply, lang = "Okay, I did not save that reminder.", "en"
+        else:
+            appointment = parse_ai_appointment_request(prompt)
+            reminder = parse_ai_reminder_request(prompt) if not appointment else None
+            if appointment:
+                if appointment.get("error"):
+                    reply, lang = appointment["error"], "en"
+                else:
+                    st.session_state.pop("pending_ai_reminder", None)
+                    st.session_state.pending_ai_appointment = appointment
+                    hospital_note = f" at {appointment['hospital']}" if appointment["hospital"] else ""
+                    if detect_lang(prompt) == "bn":
+                        hospital_bn = f" {appointment['hospital']} হাসপাতালে" if appointment["hospital"] else ""
+                        reply = (
+                            f"আমি {appointment['doctor']} এর সাথে{hospital_bn} {appointment['date']} তারিখে "
+                            f"{appointment['time']} এ অ্যাপয়েন্টমেন্ট সেট করতে পারি। 'হ্যাঁ' লিখে সংরক্ষণ করুন, অথবা 'না' লিখে বাতিল করুন।"
+                        )
+                        lang = "bn"
+                    else:
+                        reply = (
+                            f"I can set an appointment with {appointment['doctor']}{hospital_note} on "
+                            f"{appointment['date']} at {appointment['time']}. Reply yes to save it, or no to cancel."
+                        )
+                        lang = "en"
+            elif reminder:
+                if reminder.get("error"):
+                    reply, lang = reminder["error"], "en"
+                else:
+                    st.session_state.pending_ai_reminder = reminder
+                    reply = (
+                        f"I can set a reminder for {reminder['medicine']} on {reminder['date']} at "
+                        f"{reminder['time']}. Reply yes to save it, or no to cancel."
+                    )
+                    lang = "en"
+            else:
+                if detect_lang(prompt) == "bn":
+                    reply = (
+                        "আমি শুধু ওষুধের রিমাইন্ডার এবং ডাক্তার অ্যাপয়েন্টমেন্টে সাহায্য করি। "
+                        "উদাহরণ: ‘৮ টায় প্যারাসিটামল খাওয়ার রিমাইন্ডার দাও’ বা ‘আগামীকাল ৩ টায় ডাক্তারের অ্যাপয়েন্টমেন্ট বুক করো’।"
+                    )
+                    lang = "bn"
+                else:
+                    reply = (
+                        "I can help only with medicine reminders and doctor appointments. "
+                        "Try: ‘Remind me to take paracetamol at 8 PM’ or ‘Book a doctor appointment tomorrow at 3 PM’."
+                    )
+                    lang = "en"
         st.session_state.chat_history.append(("ai", reply))
         st.session_state.ai_last_reply = reply
         st.session_state.ai_last_lang = lang
+        if st.session_state.get("ai_voice_enabled", True):
+            try:
+                speak(reply, lang)
+            except Exception:
+                pass
         st.rerun()
 
-    chat_col, side_col = st.columns([1.7, 1])
-   
-    user_label = T("ai_you_label") 
+    st.markdown(
+        """
+        <div class='assistant-hero'>
+            <h2>AI Assistant <span>↗</span></h2>
+            <div class='subtitle'>Ask MediVoice anything</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    user_label = T("ai_you_label")
     bot_label = T("ai_bot_label")
+
+    chat_col, side_col = st.columns([1.7, 1.08], gap="large")
 
     with chat_col:
         st.markdown("<div class='ai-shell'><div class='chat-timeline'>", unsafe_allow_html=True)
@@ -5211,41 +5973,50 @@ def ai_chat_page():
             process_prompt(user_input)
 
     with side_col:
-        st.markdown("<div class='quick-card'>", unsafe_allow_html=True)
-        st.markdown("#### ⚡ Quick prompts")
+        st.markdown("<div class='prompt-panel'>", unsafe_allow_html=True)
+        st.markdown("<h4>⚡ Quick prompts</h4>", unsafe_allow_html=True)
         st.markdown("<p class='prompt-note'>Tap to auto-fill a helpful AI request.</p>", unsafe_allow_html=True)
         prompts = [
-            "What is paracetamol?",
-            "Give me a health tip",
-            "Tell me about medicine safety", 
-            "How to take medicines properly?",
+            "Remind me to take medicine at 8 PM",
+            "Book doctor appointment with Dr. Khan tomorrow at 3 PM",
+            "Set a reminder for vitamin D tomorrow at 9 AM",
+            "Book an appointment with Dr. Rahman next Monday at 10 AM",
+            "৮ টায় ওষুধ খাওয়ার রিমাইন্ডার দাও",
+            "আগামীকাল ৩ টায় ডাক্তারের অ্যাপয়েন্টমেন্ট বুক করো",
+            "সকাল ৯টায় ভিটামিন ডি খাওয়ার রিমাইন্ডার দাও",
+            "রবিবার ১০ টায় ডাক্তারের অ্যাপয়েন্টমেন্ট রাখো",
         ]
         for idx, prompt in enumerate(prompts):
             if st.button(prompt, key=f"ai_prompt_{idx}", use_container_width=True):
                 process_prompt(prompt)
         st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown("<div class='quick-card voice-card'>", unsafe_allow_html=True)
-        st.markdown("#### 🔊 " + T("ai_listen_header"))
+        st.markdown("<div class='prompt-panel voice-card'>", unsafe_allow_html=True)
+        st.markdown("<h4>🔊 " + T("ai_listen_header") + "</h4>", unsafe_allow_html=True)
+        st.checkbox("Auto-play AI voice", key="ai_voice_toggle", value=st.session_state.get("ai_voice_enabled", True))
+        st.session_state.ai_voice_enabled = st.session_state.get("ai_voice_toggle", True)
+
         if st.session_state.get("ai_last_reply"):
             lang = st.session_state.get("ai_last_lang", "en")
             st.caption("Last response language: " + ("Bangla" if lang == "bn" else "English"))
-            
-            voice_cols = st.columns(2)
-            
-            with voice_cols[0]:
+
+            stop_col, play_col = st.columns(2)
+            with stop_col:
+                if st.button("⏹ Stop voice", key="ai_stop_voice", use_container_width=True):
+                    stop_voice()
+
+            with play_col:
                 if st.button(T("ai_play_en"), key="ai_eng_voice", use_container_width=True):
                     speak(st.session_state.ai_last_reply, "en")
 
-            with voice_cols[1]:
-                if st.button(T("ai_play_bn"), key="ai_bn_voice", use_container_width=True):
-                    text_to_speak = st.session_state.ai_last_reply
-                    if lang == "en":
-                        with st.spinner("Translating to Bangla..."):
-                            trans_prompt = f"Translate to Bengali: {text_to_speak}"
-                            translated_text, _ = get_ai_reply(trans_prompt)
-                            text_to_speak = translated_text
-                    speak(text_to_speak, "bn")
+            if st.button(T("ai_play_bn"), key="ai_bn_voice", use_container_width=True):
+                text_to_speak = st.session_state.ai_last_reply
+                if lang == "en":
+                    with st.spinner("Translating to Bangla..."):
+                        trans_prompt = f"Translate to Bengali: {text_to_speak}"
+                        translated_text, _ = get_ai_reply(trans_prompt)
+                        text_to_speak = translated_text
+                speak(text_to_speak, "bn")
         else:
             st.caption("Ask something to enable playback controls.")
         st.markdown("</div>", unsafe_allow_html=True)
@@ -5300,7 +6071,7 @@ def main_app():
     with tabs[1]: reminders_page(conn)
     with tabs[2]: reports_page(conn)
     with tabs[3]: tools_page(conn)
-    with tabs[4]: ai_chat_page()
+    with tabs[4]: ai_chat_page(conn)
 
     conn.close()
 
@@ -5322,4 +6093,3 @@ else:
     else:
 
         login_page()
-
