@@ -21,7 +21,13 @@ It uses voice interaction and notifications to improve medication adherence, esp
 - ⏰ Customizable schedules and timings  
 - 🔔 Notifications and alerts for each dose  
 - 📱 Simple and user-friendly interface  
-- 🌐 Accessibility support for elderly and visually impaired users  
+- 🌐 Accessibility support for elderly and visually impaired users
+- Interaction Checker
+- Inventory
+- Reports
+- Prescription upload
+- Email alerts to Family members
+- Ai Support
 
 ## Installation
 ```bash
