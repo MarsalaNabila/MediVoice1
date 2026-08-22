@@ -46,8 +46,10 @@ st.set_page_config(page_title="MediVoice App - Your health companion", layout="w
 # Initialize theme in session state
 st.session_state.setdefault("dark_theme", False)  # Use the light theme until the user selects dark mode.
 
+# Purpose: choose and return the application's light or dark CSS theme.
+# Design: Facade, because callers use one function instead of theme details.
 def get_css():
-    """Facade for selecting the complete light or dark application theme."""
+    # Facade for selecting the complete light or dark application theme.
     if st.session_state.dark_theme:
         return """
         <style>
@@ -1655,6 +1657,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+# Purpose: render a consistent section heading across pages.
+# Design: Reusable component helper; no formal GoF pattern.
 def render_section_header(icon: str, title: str, subtitle: str = ""):
     subtitle_html = f"<p>{subtitle}</p>" if subtitle else ""
     icon_text = icon if icon and icon.isascii() else ""
@@ -1671,6 +1675,8 @@ def render_section_header(icon: str, title: str, subtitle: str = ""):
     st.markdown(html, unsafe_allow_html=True)
 
 
+# Purpose: render a small styled label in the selected Streamlit container.
+# Design: Reusable component helper; no formal GoF pattern.
 def render_pill(text: str, target=None):
     target = target or st
     target.markdown(f"<div class='pill'>{text}</div>", unsafe_allow_html=True)
@@ -1738,16 +1744,22 @@ BANGLA_WEEKDAY_NAMES = {
 }
 
 
+# Purpose: convert numbers to Bangla digits when the Bangla UI is active.
+# Design: Adapter-like localization helper; no formal GoF pattern.
 def to_local_digits(value: str):
     if st.session_state.get("ui_lang") == "bn":
         return str(value).translate(BANGLA_DIGIT_MAP)
     return str(value)
 
 
+# Purpose: return a number formatted for the active UI language.
+# Design: Delegation helper; no formal GoF pattern.
 def localized_number(value):
     return to_local_digits(value) if st.session_state.get("ui_lang") == "bn" else str(value)
 
 
+# Purpose: format weekday and month labels for the active UI language.
+# Design: Adapter-like localization helper; no formal GoF pattern.
 def localized_day_parts(day_obj):
     weekday = day_obj.strftime("%a")
     month = day_obj.strftime("%b")
@@ -1758,9 +1770,13 @@ def localized_day_parts(day_obj):
         day_num = to_local_digits(day_num)
     return weekday, f"{month} {day_num}"
 
+# Purpose: normalize English and Bangla voice text into parser-friendly text.
+# Design: Pipeline-style transformation helper; no formal GoF pattern.
 def normalize_voice_string(text: str):
     normalized = text.strip()
 
+    # Purpose: replace whole Bangla date words without altering larger words.
+    # Design: Small pipeline step; no formal GoF pattern.
     def replace_word_tokens(source: str, mapping: dict):
         pattern = re.compile(r"(?<![\w\u0980-\u09FF])(" + "|".join(re.escape(k) for k in sorted(mapping, key=len, reverse=True)) + r")(?![\w\u0980-\u09FF])", flags=re.UNICODE)
         return pattern.sub(lambda m: mapping[m.group(1)], source)
@@ -1809,6 +1825,8 @@ def normalize_voice_string(text: str):
     normalized = normalized.translate(BENGALI_TO_ASCII_DIGITS)
     return normalized
 
+# Purpose: extract and normalize a time from spoken text.
+# Design: Parser utility; no formal GoF pattern.
 def parse_spoken_time(text: str):
     normalized = normalize_voice_string(text).lower()
     normalized = re.sub(r"(\d{1,2})\s*(?:ta|টা|টায়|টায়)\s*", r"\1 ", normalized)
@@ -1825,6 +1843,8 @@ def parse_spoken_time(text: str):
     hour %= 24
     return f"{hour:02}:{int(minute):02}"
 
+# Purpose: extract a date from spoken text and relative date words.
+# Design: Parser utility; no formal GoF pattern.
 def parse_spoken_date(text: str):
     normalized = normalize_voice_string(text).lower()
     today = datetime.now().date()
@@ -1901,6 +1921,8 @@ BN_NUMBER_WORDS = {
     "দশ": 10,
 }
 
+# Purpose: extract numeric digits, number words, or fractions from speech.
+# Design: Parser utility; no formal GoF pattern.
 def parse_spoken_number(text: str):
     normalized = normalize_voice_string(text).lower()
     match = re.search(r"\d+(?:\.\d+)?", normalized)
@@ -1930,6 +1952,8 @@ def parse_spoken_number(text: str):
     return None
 
 
+# Purpose: convert seconds into a readable minutes or hours label.
+# Design: Formatting utility; no formal GoF pattern.
 def humanize_minutes(seconds):
     if seconds is None:
         return "0m"
@@ -1943,6 +1967,8 @@ def humanize_minutes(seconds):
     return f"{hours}h {mins}m"
 
 
+# Purpose: classify a reminder as upcoming, soon, due, or overdue.
+# Design: State-like classification helper; no formal GoF pattern.
 def describe_reminder_status(diff_seconds):
     if diff_seconds < -120:
         return T("chip_due_in").format(time=humanize_minutes(diff_seconds)), "chip-upcoming"
@@ -1953,6 +1979,8 @@ def describe_reminder_status(diff_seconds):
     return T("chip_overdue").format(time=humanize_minutes(diff_seconds)), "chip-overdue"
 
 
+# Purpose: query and render the user's medicine activity for several days.
+# Design: Page component helper; no formal GoF pattern.
 def render_week_tracker(conn, user_id, start_date, days=5):
     if not user_id:
         return
@@ -2014,6 +2042,8 @@ def render_week_tracker(conn, user_id, start_date, days=5):
     st.markdown(header_html + grid_html, unsafe_allow_html=True)
 
 
+# Purpose: render one reminder and handle its actions and alerts.
+# Design: Component plus command-like button actions; no formal GoF pattern.
 def render_reminder_card(row, day_date, now, conn, user, user_email, family_lookup, allow_actions=True):
     notify_names, notify_emails = resolve_notification_targets(row, family_lookup)
     try:
@@ -2132,6 +2162,8 @@ def render_reminder_card(row, day_date, now, conn, user, user_email, family_look
             st.error(T("snooze_failed"))
         st.rerun()
 
+# Purpose: select fonts that can display English or Bangla chart labels.
+# Design: Configuration helper; no formal GoF pattern.
 def configure_chart_fonts():
     if st.session_state.get("ui_lang") == "bn":
         font_choices = [
@@ -2737,6 +2769,8 @@ TEXT = {
 }
 
 
+# Purpose: translate a text key using the current session language.
+# Design: Facade over the localization dictionary.
 def T(k): return TEXT[st.session_state.ui_lang].get(k, k)
 
 
@@ -2755,11 +2789,15 @@ FAMILY_RELATIONSHIPS = [
 ]
 
 
+# Purpose: convert a stored family relationship code to a localized label.
+# Design: Lookup/adapter helper; no formal GoF pattern.
 def relationship_label(code: str) -> str:
     key = f"relationship_{code}"
     return TEXT[st.session_state.ui_lang].get(key, TEXT[st.session_state.ui_lang].get("relationship_other", code.title()))
 
 
+# Purpose: render a reusable row of key performance indicator cards.
+# Design: Reusable component helper; no formal GoF pattern.
 def render_kpi_cards(cards):
     html = "<div class='kpi-row'>"
     for card in cards:
@@ -2782,6 +2820,8 @@ def render_kpi_cards(cards):
     st.markdown(html, unsafe_allow_html=True)
 
 
+# Purpose: build a radar figure from analytics labels and values.
+# Design: Factory-like chart builder; no formal GoF pattern.
 def build_radar_chart(labels, values):
     angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
     values = values + values[:1]
@@ -2799,6 +2839,8 @@ def build_radar_chart(labels, values):
     return fig
 
 
+# Purpose: build a pie figure showing intake methods.
+# Design: Factory-like chart builder; no formal GoF pattern.
 def build_method_pie(method_counts):
     fig, ax = plt.subplots(figsize=(4.5, 4.5))
     colors = ["#5f54d7", "#c27ade", "#f6b2c0", "#f9d8a7"]
@@ -2815,9 +2857,13 @@ def build_method_pie(method_counts):
     return fig
 
 
+# Purpose: load, normalize, and validate SMTP configuration.
+# Design: Facade over environment variables and Streamlit secrets.
 def get_email_config():
     secrets_obj = getattr(st, "secrets", None)
 
+    # Purpose: read one configuration value from environment or Streamlit secrets.
+    # Design: Fallback-chain helper; no formal GoF pattern.
     def fetch(key, default=None):
         env_val = os.getenv(key)
         if env_val:
@@ -2859,8 +2905,10 @@ def get_email_config():
     }
 
 
+# Purpose: store a notification in the UI log or worker queue.
+# Design: Facade that hides the two notification destinations.
 def record_notification(message, use_session=True):
-    """Facade that routes notifications to the UI log or worker queue."""
+    # Route notifications to the UI log or background worker queue.
     if use_session:
         st.session_state.setdefault("notification_log", [])
         st.session_state["notification_log"].append(message)
@@ -2870,8 +2918,10 @@ def record_notification(message, use_session=True):
             NOTIFICATION_QUEUE.append(message)
 
 
+# Purpose: send an email and report delivery errors consistently.
+# Design: Facade over SMTP setup, delivery, and feedback.
 def send_email_notification(recipients, subject, body, show_feedback=True):
-    """Facade for SMTP setup, delivery, error handling, and UI feedback."""
+    # Handle SMTP setup, delivery, errors, and user feedback in one place.
     recipients = [r.strip() for r in recipients if r and r.strip()]
     if not recipients:
         if show_feedback:
@@ -2912,6 +2962,8 @@ def send_email_notification(recipients, subject, body, show_feedback=True):
         return False, []
 
 
+# Purpose: resolve selected family IDs into names and email addresses.
+# Design: Data-mapping helper; no formal GoF pattern.
 def resolve_notification_targets(row, family_lookup):
     notify_names = []
     notify_emails = []
@@ -2945,6 +2997,8 @@ def resolve_notification_targets(row, family_lookup):
     return notify_names, notify_emails
 
 
+# Purpose: parse stored inventory notification settings safely.
+# Design: Deserialization adapter; no formal GoF pattern.
 def parse_inventory_notify_config(raw_value):
     member_ids = []
     include_self = False
@@ -2971,6 +3025,8 @@ def parse_inventory_notify_config(raw_value):
     return cleaned_ids, include_self
 
 
+# Purpose: build the final recipient list for an inventory alert.
+# Design: Policy/helper function; no formal GoF pattern.
 def resolve_inventory_recipient_emails(row, user_email, family_lookup):
     member_ids, include_self = parse_inventory_notify_config(row.get("notify_member_ids"))
     recipients = []
@@ -2987,6 +3043,8 @@ def resolve_inventory_recipient_emails(row, user_email, family_lookup):
     return recipients
 
 
+# Purpose: retrieve one user's email address from SQLite.
+# Design: Repository-like data-access helper; no formal GoF pattern.
 def get_user_email(conn, user_id):
     try:
         row = conn.execute("SELECT email FROM users WHERE username=?", (user_id,))
@@ -2996,6 +3054,8 @@ def get_user_email(conn, user_id):
     return record[0] if record and record[0] else None
 
 
+# Purpose: detect low or empty stock and send notifications.
+# Design: Service-layer coordinator plus Facade-style public entry point.
 def process_inventory_alerts(conn, user_id, user_email, family_lookup, show_feedback=False):
     if not user_id:
         return
@@ -3070,8 +3130,10 @@ def process_inventory_alerts(conn, user_id, user_email, family_lookup, show_feed
                 record_notification(message, use_session=False)
 
 
+# Purpose: deduct medicine stock and record the usage event.
+# Design: Service-layer transaction helper; no formal GoF pattern.
 def record_inventory_usage(conn, user_id, medicine_name, quantity=1, source="manual"):
-    """Deduct stock for the given medicine and log the event."""
+    # Deduct medicine stock and record the usage event.
     if not (user_id and medicine_name):
         return False, None
     med_name = medicine_name.strip()
@@ -3115,8 +3177,10 @@ def record_inventory_usage(conn, user_id, medicine_name, quantity=1, source="man
     return True, new_stock
 
 
+# Purpose: move a reminder forward and reset its alert flags.
+# Design: Command-like state mutation; no formal GoF pattern.
 def snooze_reminder(conn, reminder_id, minutes=10):
-    """Push a reminder forward and reset notification flags."""
+    # Move a reminder forward and reset its notification flags.
     try:
         row = conn.execute(
             "SELECT date, reminder_time FROM medicine WHERE id=?",
@@ -3144,17 +3208,23 @@ def snooze_reminder(conn, reminder_id, minutes=10):
     return new_dt
 
 
+# Purpose: create a localized message for a medicine voice alert.
+# Design: Message factory/helper; no formal GoF pattern.
 def get_voice_alert_message(medicine, lang_code):
     lang_dict = TEXT.get(lang_code, TEXT["en"])
     template = lang_dict.get("voice_alert_msg", TEXT["en"]["voice_alert_msg"])
     return template.format(medicine=medicine)
 
 
+# Purpose: send a localized medicine reminder to the text-to-speech service.
+# Design: Facade over message creation and the voice provider.
 def play_voice_alert(medicine, lang_code):
-    """Facade that builds a localized medicine message and sends it to TTS."""
+    # Build a localized medicine message and send it to text-to-speech.
     speak(get_voice_alert_message(medicine, lang_code), lang_code)
 
 
+# Purpose: find due medicine reminders and play their voice alerts.
+# Design: Service-layer coordinator; no formal GoF pattern.
 def process_voice_alerts(conn, user_id, alert_lang):
     if not user_id:
         return
@@ -3201,6 +3271,8 @@ def process_voice_alerts(conn, user_id, alert_lang):
             conn.commit()
 
 
+# Purpose: coordinate due medicine and appointment email/voice notifications.
+# Design: Facade/service coordinator over several notification services.
 def process_due_notifications(conn, user_id, family_lookup, alert_lang="en", show_feedback=False):
     if not user_id:
         return
@@ -3316,6 +3388,8 @@ def process_due_notifications(conn, user_id, family_lookup, alert_lang="en", sho
                     except Exception as e:
                         print(f"Voice alert error for appointment with {a['doctor_name']}: {e}")
 
+# Purpose: open resources, run notification services, and close resources.
+# Design: Facade that coordinates the complete notification cycle.
 def run_due_notifications(user_id, alert_lang, show_feedback=False):
     if not user_id:
         return
@@ -3342,6 +3416,8 @@ def run_due_notifications(user_id, alert_lang, show_feedback=False):
         conn.close()
 
 
+# Purpose: start and replace the background notification thread.
+# Design: Worker pattern with shared session state and a stop signal.
 def ensure_notification_worker(user_id):
     """Starts the background notification worker for the current user."""
     if not user_id:
@@ -3356,6 +3432,8 @@ def ensure_notification_worker(user_id):
     st.session_state["notification_worker_stop"] = stop_event
     voice_ref = st.session_state.setdefault("notification_voice_lang_ref", {"value": st.session_state.alert_lang})
 
+    # Purpose: repeatedly check notifications until the stop event is signaled.
+    # Design: Worker pattern implementation.
     def worker():
         while not stop_event.is_set():
             try:
@@ -3375,8 +3453,10 @@ def ensure_notification_worker(user_id):
 # ============================================================
 # DATABASE INIT
 # ============================================================
+# Purpose: create database tables and migrate missing legacy columns.
+# Design: Initialization/migration service; no formal GoF pattern.
 def init_db():
-    """Create the application's tables and add missing columns for old databases."""
+    # Create application tables and add missing columns for old databases.
     conn = sqlite3.connect("medicine.db")
     c = conn.cursor()
 
@@ -3531,8 +3611,10 @@ init_db()
 # ============================================================
 # PASSWORD HASH
 # ============================================================
+# Purpose: create a salted hash for password storage or comparison.
+# Design: Security utility; no formal GoF pattern.
 def hash_password(password, salt=None):
-    """Create a salted password hash for account storage and comparison."""
+    # Create a salted password hash for storage or password comparison.
     if not salt:
         salt = os.urandom(16).hex()
     hashed = hashlib.sha256((password + salt).encode()).hexdigest()
@@ -3542,6 +3624,8 @@ def hash_password(password, salt=None):
 # ============================================================
 # PASSWORD RECOVERY PAGE
 # ============================================================
+# Purpose: request a password reset code by email.
+# Design: Page Controller for the recovery workflow.
 def password_recovery_page():
     st.markdown(
         """
@@ -3621,6 +3705,8 @@ def password_recovery_page():
 # ============================================================
 # RESET PASSWORD PAGE
 # ============================================================
+# Purpose: validate a reset code and save a new password.
+# Design: Page Controller for the reset workflow.
 def reset_password_page():
     st.markdown(
         """
@@ -3714,8 +3800,10 @@ def reset_password_page():
 # ============================================================
 # LOGIN PAGE
 # ============================================================
+# Purpose: authenticate a user and update session state.
+# Design: Page Controller plus State pattern through session_state.
 def login_page():
-    """Page Controller for username/password authentication."""
+    # Page Controller for username/password authentication.
     st.markdown(
         """
         <div class="mobile-shell">
@@ -3783,8 +3871,10 @@ def login_page():
 # ============================================================
 # SIGNUP PAGE
 # ============================================================
+# Purpose: validate and create a new user account.
+# Design: Page Controller; no formal GoF pattern.
 def signup_page():
-    """Page Controller for creating a new user account."""
+    # Page Controller for creating a new user account.
     st.markdown(
         """
         <div class="mobile-shell">
@@ -3839,6 +3929,8 @@ def signup_page():
 # ============================================================
 # SIDEBAR CONTROLS
 # ============================================================
+# Purpose: render shared language, voice, and logout controls.
+# Design: Shared UI component; no formal GoF pattern.
 def sidebar_controls():
     """Render shared settings and update the current user's session state."""
     render_pill(T("settings_title"), target=st.sidebar)
@@ -3879,8 +3971,10 @@ def sidebar_controls():
 # ============================================================
 # DASHBOARD (Voice Alerts)
 # ============================================================
+# Purpose: render the main dashboard and active reminders.
+# Design: Page Controller and Facade client for notification services.
 def dashboard_page(conn):
-    """Page Controller for reminders, appointments, and notification status."""
+    # Page Controller for reminders, appointments, and notification status.
     render_section_header("🏠", T("dashboard"), T("dashboard_subtitle"))
 
     user = st.session_state.user
@@ -4026,8 +4120,10 @@ def dashboard_page(conn):
 # ============================================================
 # ADD REMINDER
 # ============================================================
+# Purpose: collect and save a medicine reminder from the form.
+# Design: Page Controller with a database service call.
 def reminders_page(conn):
-    """Page Controller for creating and storing medicine reminders."""
+    # Page Controller for creating and storing medicine reminders.
     render_section_header("⏰", T("add_rem"), T("reminders_subtitle"))
 
     user = st.session_state.user
@@ -4126,8 +4222,10 @@ def reminders_page(conn):
 # ============================================================
 # WEEKLY SUMMARY
 # ============================================================
+# Purpose: calculate and display seven-day medicine adherence.
+# Design: Page Controller and reporting component.
 def weekly_summary(conn):
-    """Page Controller for the seven-day medicine adherence summary."""
+    # Page Controller for the seven-day medicine adherence summary.
     render_section_header("📆", T("weekly_title"), T("weekly_subtitle"))
 
     user = st.session_state.user
@@ -4145,6 +4243,8 @@ def weekly_summary(conn):
 
     df["date"] = pd.to_datetime(df["date"])
 
+    # Purpose: build one medicine status item for the weekly summary.
+    # Design: Reusable rendering helper; no formal GoF pattern.
     def render_med_item(name, is_taken):
         status_label = T("taken") if is_taken else T("missed")
         status_class = "ok" if is_taken else "miss"
@@ -4255,8 +4355,10 @@ def weekly_summary(conn):
             st.altair_chart(chart, use_container_width=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
+# Purpose: calculate adherence metrics and render analytics charts.
+# Design: Page Controller with chart-builder helpers.
 def analytics_page(conn):
-    """Page Controller for medicine adherence statistics and charts."""
+    # Page Controller for medicine adherence statistics and charts.
     render_section_header("📊", T("analytics_title"), T("analytics_subtitle"))
     configure_chart_fonts()
 
@@ -4335,6 +4437,8 @@ def analytics_page(conn):
     # -------------------------------------------------------
     render_pill(f"\U0001F552 {T('time_of_day_adherence')}")  # clock emoji
 
+    # Purpose: group a reminder hour into a readable day period.
+    # Design: Classification strategy helper; no formal GoF pattern.
     def _bucketize(hour: int) -> str:
         if 5 <= hour < 11:
             return "Morning (5am-11am)"
@@ -4388,8 +4492,10 @@ def analytics_page(conn):
 # ============================================================
 # UPDATED MONTHLY REPORT (MULTI-COLOR + PDF)
 # ============================================================
+# Purpose: display monthly adherence and generate a PDF report.
+# Design: Page Controller plus report-builder workflow.
 def monthly_report_page(conn):
-    """Page Controller for monthly statistics and PDF report downloads."""
+    # Page Controller for monthly statistics and PDF report downloads.
     render_section_header("📄", T("monthly_title"), T("monthly_subtitle"))
 
     user = st.session_state.user
@@ -4519,8 +4625,10 @@ def monthly_report_page(conn):
 # FIXED — INVENTORY PAGE (No duplicate keys)
 # ============================================================
 
+# Purpose: manage stock, usage logs, and inventory alerts.
+# Design: Page Controller and Facade client for inventory services.
 def inventory_page(conn):
-    """Page Controller for medicine stock, usage, and low-stock alerts."""
+    # Page Controller for medicine stock, usage, and low-stock alerts.
     render_section_header("📦", T("inventory_tool"), T("inventory_subtitle"))
 
     user = st.session_state.user
@@ -4787,6 +4895,8 @@ def inventory_page(conn):
 # ============================================================
 # PRESCRIPTION IMAGE UPLOADS
 # ============================================================
+# Purpose: ensure the prescription table exists before file operations.
+# Design: Lazy initialization helper; no formal GoF pattern.
 def _ensure_prescription_table(conn):
     conn.execute(
         """
@@ -4803,6 +4913,8 @@ def _ensure_prescription_table(conn):
     conn.commit()
 
 
+# Purpose: create a safe, timestamped filename for an uploaded image.
+# Design: Factory-like value builder; no formal GoF pattern.
 def _build_prescription_filename(original_name: str) -> str:
     base_path = Path(original_name or "prescription.png")
     base = re.sub(r"[^A-Za-z0-9_-]", "", base_path.stem)
@@ -4813,8 +4925,10 @@ def _build_prescription_filename(original_name: str) -> str:
     return f"{timestamp}_{base}{ext}"
 
 
+# Purpose: upload, store, preview, and download prescription images.
+# Design: Page Controller for the prescription workflow.
 def prescription_upload_page(conn):
-    """Page Controller for storing and downloading prescription images."""
+    # Page Controller for storing and downloading prescription images.
     _ensure_prescription_table(conn)
     user = st.session_state.user
 
@@ -4897,8 +5011,10 @@ def prescription_upload_page(conn):
 # ============================================================
 # INTERACTION CHECKER
 # ============================================================
+# Purpose: compare two medicines against the known interaction table.
+# Design: Page Controller with a lookup-table rule engine.
 def interaction_checker_page(conn):
-    """Page Controller for checking the application's known medicine interactions."""
+    # Page Controller for checking known medicine interactions.
     render_section_header("🔍", T("interaction_checker"), T("interaction_subtitle"))
 
     col1, col2 = st.columns(2)
@@ -4925,6 +5041,8 @@ def interaction_checker_page(conn):
 # ============================================================
 # VOICE COMMANDS
 # ============================================================
+# Purpose: list today's medicine reminders.
+# Design: Query/view helper; no formal GoF pattern.
 def show_today(conn):
     user = st.session_state.user
     t = datetime.now().strftime("%Y-%m-%d")
@@ -4936,6 +5054,8 @@ def show_today(conn):
         for _, r in df.iterrows():
             st.write(f"{r['medicine']} — {r['reminder_time']}")
 
+# Purpose: delete the most recently created medicine reminder.
+# Design: Command-like database mutation; no formal GoF pattern.
 def delete_last(conn):
     user = st.session_state.user
     c = conn.cursor()
@@ -5032,12 +5152,16 @@ FREQUENCY_MAP = [
 ]
 
 
+# Purpose: parse a voice command and save its reminder details.
+# Design: Parser pipeline plus Page/Service boundary helper.
 def parse_voice(text, conn):
-    """Parse a spoken command and save it as a medicine reminder."""
+    # Parse a spoken command and save it as a medicine reminder.
     original = text.strip()
     cleaned = normalize_voice_string(original).lower()
     cleaned = re.sub(r"(\d+)\s*(?:টা|টায়|টায়)\s*", r"\1 ", cleaned)
 
+    # Purpose: remove a matched voice-token span from normalized text.
+    # Design: Parser pipeline helper; no formal GoF pattern.
     def remove_span(source: str, span):
         return (source[: span[0]] + " " + source[span[1]:]).strip()
 
@@ -5158,8 +5282,10 @@ def parse_voice(text, conn):
 # ============================================================
 # DOCTOR APPOINTMENTS
 # ============================================================
+# Purpose: create, display, speak, and delete doctor appointments.
+# Design: Page Controller with notification and voice Facades.
 def appointment_page(conn):
-    """Page Controller for creating and managing doctor appointments."""
+    # Page Controller for creating and managing doctor appointments.
     render_section_header("🩺", T("doctor_appointments"), T("appointment_subtitle"))
 
     user = st.session_state.user
@@ -5273,8 +5399,10 @@ def appointment_page(conn):
 # ============================================================
 # FAMILY MEMBERS PAGE
 # ============================================================
+# Purpose: manage family members and their notification details.
+# Design: Page Controller for a CRUD workflow.
 def family_members_page(conn):
-    """Page Controller for storing family members and notification recipients."""
+    # Page Controller for storing family members and notification recipients.
     st.session_state.setdefault("reset_family_form", False)
     if st.session_state["reset_family_form"]:
         for key in ("family_member_name", "family_health", "family_email"):
@@ -5376,6 +5504,8 @@ def family_members_page(conn):
 # ============================================================
 # SLEEP INSIGHTS PAGE
 # ============================================================
+# Purpose: derive quality and mood scores from sleep duration.
+# Design: Rule-based Strategy-like scoring function.
 def derive_sleep_scores(hours):
     """Rule-based strategy that maps sleep duration to estimated scores."""
     if hours < 6:  # Less than six hours usually indicates insufficient rest.
@@ -5387,8 +5517,10 @@ def derive_sleep_scores(hours):
     return 3, 3  # More than nine hours receives a moderate score for monitoring.
 
 
+# Purpose: produce localized sleep status, risks, and prevention advice.
+# Design: Rule-based decision service; no formal GoF pattern.
 def assess_sleep_entry(hours, quality, mood, language):
-    """Produces localized sleep status, possible effects, and prevention advice."""
+    # Produce localized sleep status, possible effects, and prevention advice.
     is_bangla = language == "bn"
     if hours < 6:
         if is_bangla:
@@ -5432,8 +5564,10 @@ def assess_sleep_entry(hours, quality, mood, language):
     return result
 
 
+# Purpose: log sleep and display assessments, trends, charts, and AI advice.
+# Design: Page Controller using rule-based and AI strategies.
 def sleep_insights_page(conn):
-    """Page Controller for sleep logging, assessment, charts, and AI advice."""
+    # Page Controller for sleep logging, assessment, charts, and AI advice.
     render_section_header("🌙", T("sleep_insights"), T("sleep_subtitle"))
 
     user = st.session_state.user
@@ -5622,8 +5756,10 @@ def sleep_insights_page(conn):
 # ============================================================
 # CLEAN FIXED TOOLS PAGE  (FULL BLUE VERSION)
 # ============================================================
+# Purpose: display tools and dispatch each selected tool page.
+# Design: Registry-style dispatch plus Page Controller.
 def tools_page(conn):
-    """Page Controller using a registry-style list to dispatch tool views."""
+    # Page Controller using a registry-style list to dispatch tool views.
     render_section_header("🧰", T("tools"), T("tools_subtitle"))
 
     
@@ -5656,6 +5792,8 @@ import re
 # ------------------------------
 # Detect Language (Bangla vs English)
 # ------------------------------
+# Purpose: identify whether generated text contains Bangla characters.
+# Design: Detection utility; no formal GoF pattern.
 def detect_lang(text):
     return "bn" if re.search(r"[\u0980-\u09FF]", text) else "en"
 
@@ -5666,6 +5804,8 @@ def detect_lang(text):
 # Gemini API configuration. Set GEMINI_API_KEY in the environment before
 # starting Streamlit; never commit an API key to this file.
 # ============================================================
+# Purpose: load the current Gemini API key from Windows or environment settings.
+# Design: Configuration Facade with a source fallback chain.
 def load_gemini_api_key():
     """Prefer the current saved Windows key over a stale process environment."""
     if os.name == "nt":
@@ -5688,8 +5828,10 @@ GEMINI_URL = (
 )
 
 
+# Purpose: return a local response when the remote AI service is unavailable.
+# Design: Fallback Strategy-like implementation.
 def generate_local_fallback_reply(prompt):
-    """Provide a useful offline reply when Gemini quota is exhausted."""
+    # Provide a useful offline reply when Gemini quota is exhausted.
     prompt_text = (prompt or "").strip()
     lower = normalize_voice_string(prompt_text).lower()
     is_bangla = bool(re.search(r"[\u0980-\u09FF]", prompt_text))
@@ -5720,8 +5862,10 @@ def generate_local_fallback_reply(prompt):
     return reply, "en"
 
 
+# Purpose: send a prompt to Gemini and normalize success or failure responses.
+# Design: Facade over the external AI service and fallback strategy.
 def get_ai_reply(prompt):
-    """Facade for Gemini requests, response parsing, and offline fallback handling."""
+    # Facade for Gemini requests, response parsing, and offline fallback handling.
     # Reload for every request so Streamlit never keeps an outdated key after
     # the Windows user setting is changed.
     api_key = load_gemini_api_key()
@@ -5792,8 +5936,10 @@ def get_ai_reply(prompt):
 # ============================================================
 # AI CHAT PAGE (Blue Theme)
 # ============================================================
+# Purpose: extract medicine reminder details from an AI chat request.
+# Design: Parser component; no formal GoF pattern.
 def parse_ai_reminder_request(prompt):
-    """Extract a medicine reminder request from spoken English or Bangla."""
+    # Extract a medicine reminder request from spoken English or Bangla.
     text = normalize_voice_string(prompt).strip()
     lower = text.lower()
     reminder_words = (
@@ -5842,8 +5988,10 @@ def parse_ai_reminder_request(prompt):
     }
 
 
+# Purpose: extract appointment details from an AI chat request.
+# Design: Parser component; no formal GoF pattern.
 def parse_ai_appointment_request(prompt):
-    """Extract a doctor appointment request from natural spoken English or Bangla."""
+    # Extract a doctor appointment request from natural spoken English or Bangla.
     text = normalize_voice_string(prompt).strip()
     lower = text.lower()
     appointment_words = (
@@ -5865,6 +6013,8 @@ def parse_ai_appointment_request(prompt):
 
     appointment_date = parse_spoken_date(text) or datetime.now().date()
 
+    # Purpose: remove command words and dates from an extracted doctor name.
+    # Design: Parser pipeline helper; no formal GoF pattern.
     def clean_doctor_name(value):
         value = (value or "").strip()
         value = re.sub(r"(?i)\b(?:reply|yes|no|save|cancel|it|or|please|book|schedule|visit|checkup|check up|appointment|doctor|doctors|clinic|hospital|centre|center|with|for|at|in|on|to|of|this|that|there|here|বুক|করো|করে|রাখো|দাও|দেখাতে|দেখাবেন|অ্যাপয়েন্টমেন্ট|অ্যাপয়েন্টমেন্ট|ডাক্তারের|ডাক্তার|এ|এর|সাথে)\b", " ", value)
@@ -5878,6 +6028,8 @@ def parse_ai_appointment_request(prompt):
         value = re.sub(r"\s+", " ", value).strip(" .,!?;:-")
         return value
 
+    # Purpose: prevent date or time tokens from being treated as doctor names.
+    # Design: Validation rule helper; no formal GoF pattern.
     def is_date_like(value):
         candidate = value.strip().lower()
         if not candidate:
@@ -5939,8 +6091,10 @@ def parse_ai_appointment_request(prompt):
     }
 
 
+# Purpose: run the AI chat, confirmation flow, and voice playback controls.
+# Design: Page Controller with State, parser, and Facade collaborators.
 def ai_chat_page(conn):
-    """Page Controller for AI chat, reminder parsing, and voice playback."""
+    # Page Controller for AI chat, reminder parsing, and voice playback.
     render_section_header("🤖", T("ai"), T("ai_subtitle"))
     st.session_state.setdefault("ai_voice_enabled", True)
 
@@ -5960,6 +6114,8 @@ def ai_chat_page(conn):
         ):
             st.session_state.chat_history[0] = ("ai", T("ai_greeting"))
 
+    # Purpose: process chat input, confirmations, reminders, appointments, and replies.
+    # Design: Command handler using State and Facade collaborators.
     def process_prompt(prompt: str):
         st.session_state.chat_history.append(("user", prompt))
 
@@ -6163,6 +6319,8 @@ def ai_chat_page(conn):
 # ============================================================
 # REPORTS PAGE — FIXED + CONNECTED
 # ============================================================
+# Purpose: select and render the requested report view.
+# Design: Page Controller with conditional dispatch.
 def reports_page(conn):
     render_section_header("📑", T("reports"), T("reports_subtitle"))
 
@@ -6191,8 +6349,10 @@ def reports_page(conn):
 # ============================================================
 # MAIN APP CONTROLLER
 # ============================================================
+# Purpose: render shared controls, tabs, pages, and the database lifecycle.
+# Design: Front Controller for the authenticated application.
 def main_app():
-    """Front Controller for authenticated pages and shared resources."""
+    # Front Controller for authenticated pages and shared resources.
     sidebar_controls()
     # Ensure worker runs every time
     if st.session_state.user:
