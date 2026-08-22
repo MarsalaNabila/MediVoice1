@@ -3,41 +3,51 @@
 # Voice Alerts • AI • Inventory • Appointments • Tools
 # ============================================================
 
-import streamlit as st
-import sqlite3
-import pandas as pd
-from datetime import datetime, timedelta
-import hashlib, os, tempfile, requests, re, mimetypes, json, smtplib, threading, secrets
-from pathlib import Path
-import matplotlib.pyplot as plt
-import numpy as np
-import altair as alt
-from PIL import Image
-from email.mime.text import MIMEText
-from collections import deque
+import streamlit as st  # Build the web interface and manage Streamlit session state.
+import sqlite3  # Store application data in the local SQLite database.
+import pandas as pd  # Load database results into tables and charts.
+from datetime import datetime, timedelta  # Handle dates, times, and reminder offsets.
+import hashlib, os, tempfile, requests, re, mimetypes, json, smtplib, threading, secrets  # Shared standard-library and HTTP utilities.
+from pathlib import Path  # Handle uploaded-file paths safely.
+import matplotlib.pyplot as plt  # Render static analytics charts.
+import numpy as np  # Perform numeric calculations for analytics.
+import altair as alt  # Render interactive charts.
+from PIL import Image  # Read uploaded prescription images.
+from email.mime.text import MIMEText  # Build email message bodies.
+from collections import deque  # Queue notifications from the background worker.
+
+# ARCHITECTURE NOTES
+# - Front Controller: main_app() routes the authenticated application views.
+# - Page Controller: each *_page() function renders and handles one screen.
+# - Facade: voice, AI, notification, and database helpers hide lower-level details.
+# - Strategy-like fallback: voice input tries the microphone, then sounddevice recording.
+# - State pattern: session_state controls login, page, language, and worker state.
+# - Registry-style dispatch: tools stores each tool's name, label, and page function together.
+
 # Voice modules
 from voice_input import get_voice_input
 from voice_alert import speak, stop_voice
 from fpdf import FPDF
 
-pdf = FPDF()
-pdf.add_page()
-pdf.set_font("Arial", size=12)
+pdf = FPDF()  # Create the startup PDF test object.
+pdf.add_page()  # Add one page to the test PDF.
+pdf.set_font("Arial", size=12)  # Set the test PDF font.
 
-pdf.cell(200, 10, txt="Hello from MediVoice!", ln=True, align="C")
+pdf.cell(200, 10, txt="Hello from MediVoice!", ln=True, align="C")  # Write a centered test message.
 
-pdf.output("medivoice_test.pdf")
+pdf.output("medivoice_test.pdf")  # Write the test file to disk during startup.
 
 
 # ============================================================
 # STREAMLIT CONFIG + THEME CSS
 # ============================================================
-st.set_page_config(page_title="MediVoice App - Your health companion", layout="wide")
+st.set_page_config(page_title="MediVoice App - Your health companion", layout="wide")  # Configure the Streamlit page.
 
 # Initialize theme in session state
-st.session_state.setdefault("dark_theme", False)
+st.session_state.setdefault("dark_theme", False)  # Use the light theme until the user selects dark mode.
 
 def get_css():
+    """Facade for selecting the complete light or dark application theme."""
     if st.session_state.dark_theme:
         return """
         <style>
@@ -2147,16 +2157,16 @@ PRESCRIPTION_DIR.mkdir(exist_ok=True)
 # ============================================================
 # SESSION DEFAULTS
 # ============================================================
-st.session_state.setdefault("logged", False)
-st.session_state.setdefault("page", "login")
-st.session_state.setdefault("ui_lang", "en")
-st.session_state.setdefault("alert_lang", "en")
-st.session_state.setdefault("notification_voice_lang_ref", {"value": st.session_state.alert_lang})
-st.session_state.setdefault("notification_log", [])
-st.session_state.setdefault("snooze_minutes", 10)
-NOTIFICATION_POLL_SECONDS = 2
-NOTIFICATION_QUEUE = deque(maxlen=50)
-NOTIFICATION_LOCK = threading.Lock()
+st.session_state.setdefault("logged", False)  # Track whether the current user is authenticated.
+st.session_state.setdefault("page", "login")  # Track which authentication page should be shown.
+st.session_state.setdefault("ui_lang", "en")  # Store the visible application language.
+st.session_state.setdefault("alert_lang", "en")  # Store the language used by voice alerts.
+st.session_state.setdefault("notification_voice_lang_ref", {"value": st.session_state.alert_lang})  # Share the live voice language with the worker.
+st.session_state.setdefault("notification_log", [])  # Keep recent background-worker messages for the UI.
+st.session_state.setdefault("snooze_minutes", 10)  # Set the default reminder snooze duration.
+NOTIFICATION_POLL_SECONDS = 2  # Check for due notifications every two seconds.
+NOTIFICATION_QUEUE = deque(maxlen=50)  # Limit queued messages so memory usage stays bounded.
+NOTIFICATION_LOCK = threading.Lock()  # Protect the queue while the worker and UI access it.
 # Voice alert grace windows (in seconds)
 VOICE_ALERT_WINDOW_BEFORE = 0     # no early alerts; wait until reminder time
 VOICE_ALERT_WINDOW_AFTER = 7200   # keep trying up to 2 hours late
@@ -2850,6 +2860,7 @@ def get_email_config():
 
 
 def record_notification(message, use_session=True):
+    """Facade that routes notifications to the UI log or worker queue."""
     if use_session:
         st.session_state.setdefault("notification_log", [])
         st.session_state["notification_log"].append(message)
@@ -2860,6 +2871,7 @@ def record_notification(message, use_session=True):
 
 
 def send_email_notification(recipients, subject, body, show_feedback=True):
+    """Facade for SMTP setup, delivery, error handling, and UI feedback."""
     recipients = [r.strip() for r in recipients if r and r.strip()]
     if not recipients:
         if show_feedback:
@@ -3139,6 +3151,7 @@ def get_voice_alert_message(medicine, lang_code):
 
 
 def play_voice_alert(medicine, lang_code):
+    """Facade that builds a localized medicine message and sends it to TTS."""
     speak(get_voice_alert_message(medicine, lang_code), lang_code)
 
 
@@ -3330,6 +3343,7 @@ def run_due_notifications(user_id, alert_lang, show_feedback=False):
 
 
 def ensure_notification_worker(user_id):
+    """Starts the background notification worker for the current user."""
     if not user_id:
         return
     
@@ -3362,6 +3376,7 @@ def ensure_notification_worker(user_id):
 # DATABASE INIT
 # ============================================================
 def init_db():
+    """Create the application's tables and add missing columns for old databases."""
     conn = sqlite3.connect("medicine.db")
     c = conn.cursor()
 
@@ -3517,6 +3532,7 @@ init_db()
 # PASSWORD HASH
 # ============================================================
 def hash_password(password, salt=None):
+    """Create a salted password hash for account storage and comparison."""
     if not salt:
         salt = os.urandom(16).hex()
     hashed = hashlib.sha256((password + salt).encode()).hexdigest()
@@ -3699,6 +3715,7 @@ def reset_password_page():
 # LOGIN PAGE
 # ============================================================
 def login_page():
+    """Page Controller for username/password authentication."""
     st.markdown(
         """
         <div class="mobile-shell">
@@ -3767,6 +3784,7 @@ def login_page():
 # SIGNUP PAGE
 # ============================================================
 def signup_page():
+    """Page Controller for creating a new user account."""
     st.markdown(
         """
         <div class="mobile-shell">
@@ -3822,6 +3840,7 @@ def signup_page():
 # SIDEBAR CONTROLS
 # ============================================================
 def sidebar_controls():
+    """Render shared settings and update the current user's session state."""
     render_pill(T("settings_title"), target=st.sidebar)
 
     lang_options = ["en", "bn"]
@@ -3861,6 +3880,7 @@ def sidebar_controls():
 # DASHBOARD (Voice Alerts)
 # ============================================================
 def dashboard_page(conn):
+    """Page Controller for reminders, appointments, and notification status."""
     render_section_header("🏠", T("dashboard"), T("dashboard_subtitle"))
 
     user = st.session_state.user
@@ -4007,6 +4027,7 @@ def dashboard_page(conn):
 # ADD REMINDER
 # ============================================================
 def reminders_page(conn):
+    """Page Controller for creating and storing medicine reminders."""
     render_section_header("⏰", T("add_rem"), T("reminders_subtitle"))
 
     user = st.session_state.user
@@ -4106,6 +4127,7 @@ def reminders_page(conn):
 # WEEKLY SUMMARY
 # ============================================================
 def weekly_summary(conn):
+    """Page Controller for the seven-day medicine adherence summary."""
     render_section_header("📆", T("weekly_title"), T("weekly_subtitle"))
 
     user = st.session_state.user
@@ -4234,6 +4256,7 @@ def weekly_summary(conn):
             st.markdown("</div>", unsafe_allow_html=True)
 
 def analytics_page(conn):
+    """Page Controller for medicine adherence statistics and charts."""
     render_section_header("📊", T("analytics_title"), T("analytics_subtitle"))
     configure_chart_fonts()
 
@@ -4366,6 +4389,7 @@ def analytics_page(conn):
 # UPDATED MONTHLY REPORT (MULTI-COLOR + PDF)
 # ============================================================
 def monthly_report_page(conn):
+    """Page Controller for monthly statistics and PDF report downloads."""
     render_section_header("📄", T("monthly_title"), T("monthly_subtitle"))
 
     user = st.session_state.user
@@ -4496,6 +4520,7 @@ def monthly_report_page(conn):
 # ============================================================
 
 def inventory_page(conn):
+    """Page Controller for medicine stock, usage, and low-stock alerts."""
     render_section_header("📦", T("inventory_tool"), T("inventory_subtitle"))
 
     user = st.session_state.user
@@ -4789,6 +4814,7 @@ def _build_prescription_filename(original_name: str) -> str:
 
 
 def prescription_upload_page(conn):
+    """Page Controller for storing and downloading prescription images."""
     _ensure_prescription_table(conn)
     user = st.session_state.user
 
@@ -4872,6 +4898,7 @@ def prescription_upload_page(conn):
 # INTERACTION CHECKER
 # ============================================================
 def interaction_checker_page(conn):
+    """Page Controller for checking the application's known medicine interactions."""
     render_section_header("🔍", T("interaction_checker"), T("interaction_subtitle"))
 
     col1, col2 = st.columns(2)
@@ -5006,6 +5033,7 @@ FREQUENCY_MAP = [
 
 
 def parse_voice(text, conn):
+    """Parse a spoken command and save it as a medicine reminder."""
     original = text.strip()
     cleaned = normalize_voice_string(original).lower()
     cleaned = re.sub(r"(\d+)\s*(?:টা|টায়|টায়)\s*", r"\1 ", cleaned)
@@ -5131,6 +5159,7 @@ def parse_voice(text, conn):
 # DOCTOR APPOINTMENTS
 # ============================================================
 def appointment_page(conn):
+    """Page Controller for creating and managing doctor appointments."""
     render_section_header("🩺", T("doctor_appointments"), T("appointment_subtitle"))
 
     user = st.session_state.user
@@ -5245,6 +5274,7 @@ def appointment_page(conn):
 # FAMILY MEMBERS PAGE
 # ============================================================
 def family_members_page(conn):
+    """Page Controller for storing family members and notification recipients."""
     st.session_state.setdefault("reset_family_form", False)
     if st.session_state["reset_family_form"]:
         for key in ("family_member_name", "family_health", "family_email"):
@@ -5347,16 +5377,18 @@ def family_members_page(conn):
 # SLEEP INSIGHTS PAGE
 # ============================================================
 def derive_sleep_scores(hours):
-    if hours < 6:
-        return 1, 1
-    if hours < 7:
-        return 2, 2
-    if hours <= 9:
-        return 4, 4
-    return 3, 3
+    """Rule-based strategy that maps sleep duration to estimated scores."""
+    if hours < 6:  # Less than six hours usually indicates insufficient rest.
+        return 1, 1  # Store low estimated quality and mood scores.
+    if hours < 7:  # Six to seven hours may still be below the recommended amount.
+        return 2, 2  # Store reduced estimated scores.
+    if hours <= 9:  # Seven to nine hours is the target range used by this app.
+        return 4, 4  # Store healthy estimated scores.
+    return 3, 3  # More than nine hours receives a moderate score for monitoring.
 
 
 def assess_sleep_entry(hours, quality, mood, language):
+    """Produces localized sleep status, possible effects, and prevention advice."""
     is_bangla = language == "bn"
     if hours < 6:
         if is_bangla:
@@ -5401,6 +5433,7 @@ def assess_sleep_entry(hours, quality, mood, language):
 
 
 def sleep_insights_page(conn):
+    """Page Controller for sleep logging, assessment, charts, and AI advice."""
     render_section_header("🌙", T("sleep_insights"), T("sleep_subtitle"))
 
     user = st.session_state.user
@@ -5424,9 +5457,9 @@ def sleep_insights_page(conn):
             key="sleep_hours_input"
         )
 
-        quality, mood = derive_sleep_scores(float(hours))
-        col2.metric(T("sleep_quality_label"), f"{quality}/5")
-        col2.metric(T("sleep_mood_label"), f"{mood}/5")
+        quality, mood = derive_sleep_scores(float(hours))  # Recalculate scores whenever hours change.
+        col2.metric(T("sleep_quality_label"), f"{quality}/5")  # Display the calculated quality.
+        col2.metric(T("sleep_mood_label"), f"{mood}/5")  # Display the calculated mood.
         col2.caption(
             "Estimated from sleep hours" if st.session_state.get("ui_lang", "en") != "bn"
             else "ঘুমের সময়ের ভিত্তিতে অনুমান করা হয়েছে"
@@ -5465,7 +5498,7 @@ def sleep_insights_page(conn):
             st.info(ai_sleep_advice)
 
         if st.button(T("sleep_save_entry"), key="sleep_save_btn"):
-            c.execute(
+            c.execute(  # Save the current sleep entry for the logged-in user.
                 """
                 INSERT INTO sleep_logs(user_id, log_date, hours, quality, mood, notes)
                 VALUES (?, ?, ?, ?, ?, ?)
@@ -5502,8 +5535,8 @@ def sleep_insights_page(conn):
     df = df.sort_values("log_date")
     df["notes"] = df["notes"].fillna("")
 
-    last14 = df.tail(14).copy()
-    last7 = df.tail(7).copy()
+    last14 = df.tail(14).copy()  # Keep the fourteen most recent nights for the graph.
+    last7 = df.tail(7).copy()  # Use the latest seven nights for summary metrics.
     prev7 = df.iloc[:-len(last7)].tail(7) if len(df) > len(last7) else pd.DataFrame()
 
     avg_hours = float(last7["hours"].mean())
@@ -5534,10 +5567,10 @@ def sleep_insights_page(conn):
 
     st.markdown("### " + T("sleep_chart_title"))
     duration_data = last14[["log_date", "hours"]].copy()
-    duration_data["status"] = np.where(
+    duration_data["status"] = np.where(  # Color each bar according to the target range.
         duration_data["hours"].between(7, 9), "Enough sleep", "Outside 7-9 hours"
     )
-    duration_chart = (
+    duration_chart = (  # Build one simple chart that users can understand quickly.
         alt.Chart(duration_data)
         .mark_bar(size=24, cornerRadiusTopLeft=4, cornerRadiusTopRight=4)
         .encode(
@@ -5556,11 +5589,11 @@ def sleep_insights_page(conn):
         )
         .properties(height=300)
     )
-    target_lines = alt.Chart(pd.DataFrame({"target": [7, 9]})).mark_rule(
+    target_lines = alt.Chart(pd.DataFrame({"target": [7, 9]})).mark_rule(  # Mark the lower and upper targets.
         color="#3478c9", strokeDash=[5, 5], size=2
     ).encode(y="target:Q")
     st.caption("Green means 7-9 hours. Red means below or above the recommended range.")
-    st.altair_chart(duration_chart + target_lines, use_container_width=True)
+    st.altair_chart(duration_chart + target_lines, use_container_width=True)  # Render the chart responsively.
 
     recent_df = df.sort_values("log_date", ascending=False).head(10).copy()
     recent_df["log_date"] = recent_df["log_date"].dt.strftime("%b %d, %Y")
@@ -5590,10 +5623,11 @@ def sleep_insights_page(conn):
 # CLEAN FIXED TOOLS PAGE  (FULL BLUE VERSION)
 # ============================================================
 def tools_page(conn):
+    """Page Controller using a registry-style list to dispatch tool views."""
     render_section_header("🧰", T("tools"), T("tools_subtitle"))
 
     
-    tools = [
+    tools = [  # Registry-style dispatch table: each entry maps a tool to its page function.
         ("inventory", f"💊 {T('inventory_tool')}", inventory_page),
         ("photos", f"🗂️ {T('prescription_photos')}", prescription_upload_page),
         ("interactions", f"⚠️ {T('interaction_checker')}", interaction_checker_page),
@@ -5687,6 +5721,7 @@ def generate_local_fallback_reply(prompt):
 
 
 def get_ai_reply(prompt):
+    """Facade for Gemini requests, response parsing, and offline fallback handling."""
     # Reload for every request so Streamlit never keeps an outdated key after
     # the Windows user setting is changed.
     api_key = load_gemini_api_key()
@@ -5905,6 +5940,7 @@ def parse_ai_appointment_request(prompt):
 
 
 def ai_chat_page(conn):
+    """Page Controller for AI chat, reminder parsing, and voice playback."""
     render_section_header("🤖", T("ai"), T("ai_subtitle"))
     st.session_state.setdefault("ai_voice_enabled", True)
 
@@ -6156,13 +6192,14 @@ def reports_page(conn):
 # MAIN APP CONTROLLER
 # ============================================================
 def main_app():
+    """Front Controller for authenticated pages and shared resources."""
     sidebar_controls()
     # Ensure worker runs every time
     if st.session_state.user:
         ensure_notification_worker(st.session_state.user)
-    conn = sqlite3.connect("medicine.db")
+    conn = sqlite3.connect("medicine.db")  # Share one database connection across the active page render.
 
-    tabs = st.tabs([
+    tabs = st.tabs([  # Create the main navigation tabs for authenticated users.
         "🏠 " + T("dashboard"),
         "💊 " + T("reminders"),
         "📑 " + T("reports"),
@@ -6176,23 +6213,24 @@ def main_app():
     with tabs[3]: tools_page(conn)
     with tabs[4]: ai_chat_page(conn)
 
-    conn.close()
+    conn.close()  # Release the database connection after rendering the current run.
 
 
 # ============================================================
 # ENTRY POINT
 # ============================================================
+# State-based routing: authentication state selects the main app or auth page.
 if st.session_state.logged:
-    main_app()
+    main_app()  # Render the authenticated application.
 else:
     if st.session_state.page == "login":
-        login_page()
+        login_page()  # Show the login form by default.
     elif st.session_state.page == "signup":
-        signup_page()
+        signup_page()  # Show account creation.
     elif st.session_state.page == "recovery":
-        password_recovery_page()
+        password_recovery_page()  # Show password recovery.
     elif st.session_state.page == "reset":
-        reset_password_page()
+        reset_password_page()  # Show reset-code validation and password replacement.
     else:
 
-        login_page()
+        login_page()  # Recover safely to login if the stored page is unknown.
