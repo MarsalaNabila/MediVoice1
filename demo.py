@@ -5346,6 +5346,60 @@ def family_members_page(conn):
 # ============================================================
 # SLEEP INSIGHTS PAGE
 # ============================================================
+def derive_sleep_scores(hours):
+    if hours < 6:
+        return 1, 1
+    if hours < 7:
+        return 2, 2
+    if hours <= 9:
+        return 4, 4
+    return 3, 3
+
+
+def assess_sleep_entry(hours, quality, mood, language):
+    is_bangla = language == "bn"
+    if hours < 6:
+        if is_bangla:
+            return (
+                "ঘুম যথেষ্ট নয়",
+                "নিয়মিত ৬ ঘণ্টার কম ঘুম হলে মনোযোগ, স্মৃতি, মুড ও রোগ প্রতিরোধ ক্ষমতা কমে যেতে পারে।",
+                "প্রতিদিন একই সময়ে ঘুমান, সন্ধ্যার পর ক্যাফেইন কমান এবং ঘুমের আগে স্ক্রিন ব্যবহার কমিয়ে দিন।",
+            )
+        return (
+            "Not enough sleep",
+            "Regularly sleeping less than 6 hours may affect concentration, memory, mood, and immunity.",
+            "Keep a consistent sleep schedule, reduce evening caffeine, and limit screens before bed.",
+        )
+    if hours < 7:
+        if is_bangla:
+            return (
+                "ঘুম কিছুটা কম",
+                "প্রাপ্তবয়স্কদের জন্য এই পরিমাণ ঘুম অনেক সময় যথেষ্ট নাও হতে পারে এবং দিনের ক্লান্তি বা মনোযোগের সমস্যা হতে পারে।",
+                "১৫-৩০ মিনিট করে আগে ঘুমাতে যান এবং আরামদায়ক, অন্ধকার ও শান্ত ঘুমের পরিবেশ রাখুন।",
+            )
+        return (
+            "Sleep may be low",
+            "This amount may not be enough for many adults and can contribute to daytime tiredness or difficulty concentrating.",
+            "Move bedtime earlier by 15-30 minutes and keep your sleep environment comfortable, dark, and quiet.",
+        )
+    if hours <= 9:
+        if is_bangla:
+            result = ("ঘুম যথেষ্ট", "৭-৯ ঘণ্টা ঘুম বেশিরভাগ প্রাপ্তবয়স্কের জন্য সাধারণত উপযুক্ত।", "একই ঘুমের সময়সূচি বজায় রাখুন।")
+        else:
+            result = ("Sleep is generally enough", "Seven to nine hours is usually appropriate for most adults.", "Keep a consistent sleep schedule.")
+    else:
+        if is_bangla:
+            result = ("ঘুমের সময় বেশি", "নিয়মিত ৯ ঘণ্টার বেশি ঘুম হলেও সতেজ না লাগলে ঘুমের মান বা অন্য স্বাস্থ্য সমস্যার দিকে নজর দেওয়া উচিত।", "এক সপ্তাহের প্রবণতা দেখুন; সমস্যা চলতে থাকলে চিকিৎসকের পরামর্শ নিন।")
+        else:
+            result = ("Sleep duration is high", "Regularly sleeping more than 9 hours without feeling refreshed may point to poor sleep quality or another health issue.", "Track the pattern for a week and speak with a clinician if it continues.")
+
+    if quality <= 2 or mood <= 2:
+        if is_bangla:
+            return result[0], result[1] + " কম ঘুমের মান বা খারাপ মুডও লক্ষ্য করুন।", result[2] + " নাক ডাকা, শ্বাস বন্ধ হওয়া বা দীর্ঘস্থায়ী ক্লান্তি থাকলে চিকিৎসকের সঙ্গে কথা বলুন।"
+        return result[0], result[1] + " Also pay attention to low sleep quality or mood.", result[2] + " If you snore loudly, stop breathing during sleep, or feel persistently exhausted, speak with a clinician."
+    return result
+
+
 def sleep_insights_page(conn):
     render_section_header("🌙", T("sleep_insights"), T("sleep_subtitle"))
 
@@ -5370,21 +5424,45 @@ def sleep_insights_page(conn):
             key="sleep_hours_input"
         )
 
-        quality = col2.slider(
-            T("sleep_quality_label"),
-            min_value=1,
-            max_value=5,
-            value=3,
-            key="sleep_quality_slider"
-        )
-        mood = col2.slider(
-            T("sleep_mood_label"),
-            min_value=1,
-            max_value=5,
-            value=3,
-            key="sleep_mood_slider"
+        quality, mood = derive_sleep_scores(float(hours))
+        col2.metric(T("sleep_quality_label"), f"{quality}/5")
+        col2.metric(T("sleep_mood_label"), f"{mood}/5")
+        col2.caption(
+            "Estimated from sleep hours" if st.session_state.get("ui_lang", "en") != "bn"
+            else "ঘুমের সময়ের ভিত্তিতে অনুমান করা হয়েছে"
         )
         notes = st.text_area(T("notes_label"), key="sleep_notes_input")
+
+        ui_language = st.session_state.get("ui_lang", "en")
+        assessment_title, assessment_risk, assessment_prevention = assess_sleep_entry(
+            float(hours), int(quality), int(mood), ui_language
+        )
+        st.markdown("### " + ("Sleep check" if ui_language != "bn" else "ঘুমের মূল্যায়ন"))
+        if hours < 7 or hours > 9 or quality <= 2 or mood <= 2:
+            st.warning(assessment_title)
+        else:
+            st.success(assessment_title)
+        st.markdown(
+            "**" + ("Possible effects: " if ui_language != "bn" else "সম্ভাব্য প্রভাব: ")
+            + assessment_risk + "**"
+        )
+        st.info(
+            ("Prevention: " if ui_language != "bn" else "প্রতিরোধ: ")
+            + assessment_prevention
+        )
+
+        if st.button(
+            "Get AI sleep advice" if ui_language != "bn" else "AI ঘুমের পরামর্শ নিন",
+            key="sleep_ai_advice_btn",
+        ):
+            sleep_prompt = (
+                "Analyze this sleep entry safely and briefly. Do not diagnose. Explain whether the duration is generally enough, "
+                "possible effects, prevention steps, and when to contact a clinician. "
+                f"Hours: {float(hours):.2f}; quality (1-5): {int(quality)}; morning mood (1-5): {int(mood)}; notes: {notes.strip() or 'none'}"
+            )
+            with st.spinner("Preparing sleep advice..." if ui_language != "bn" else "ঘুমের পরামর্শ তৈরি হচ্ছে..."):
+                ai_sleep_advice, _ = get_ai_reply(sleep_prompt)
+            st.info(ai_sleep_advice)
 
         if st.button(T("sleep_save_entry"), key="sleep_save_btn"):
             c.execute(
@@ -5455,9 +5533,34 @@ def sleep_insights_page(conn):
     col3.metric(T("sleep_streak"), f"{logged_last_week}/7", delta=variability_text)
 
     st.markdown("### " + T("sleep_chart_title"))
-    chart_df = last14.set_index("log_date")[["hours"]]
-    chart_df.index = chart_df.index.strftime("%b %d")
-    st.line_chart(chart_df, height=260)
+    duration_data = last14[["log_date", "hours"]].copy()
+    duration_data["status"] = np.where(
+        duration_data["hours"].between(7, 9), "Enough sleep", "Outside 7-9 hours"
+    )
+    duration_chart = (
+        alt.Chart(duration_data)
+        .mark_bar(size=24, cornerRadiusTopLeft=4, cornerRadiusTopRight=4)
+        .encode(
+            x=alt.X("log_date:T", title="Night", axis=alt.Axis(format="%b %d", labelAngle=-35)),
+            y=alt.Y("hours:Q", title="Hours slept", scale=alt.Scale(domain=[0, 12])),
+            color=alt.Color(
+                "status:N",
+                title="Result",
+                scale=alt.Scale(domain=["Enough sleep", "Outside 7-9 hours"], range=["#39a96b", "#e85d75"]),
+            ),
+            tooltip=[
+                alt.Tooltip("log_date:T", title="Night", format="%b %d, %Y"),
+                alt.Tooltip("hours:Q", title="Hours slept", format=".2f"),
+                alt.Tooltip("status:N", title="Result"),
+            ],
+        )
+        .properties(height=300)
+    )
+    target_lines = alt.Chart(pd.DataFrame({"target": [7, 9]})).mark_rule(
+        color="#3478c9", strokeDash=[5, 5], size=2
+    ).encode(y="target:Q")
+    st.caption("Green means 7-9 hours. Red means below or above the recommended range.")
+    st.altair_chart(duration_chart + target_lines, use_container_width=True)
 
     recent_df = df.sort_values("log_date", ascending=False).head(10).copy()
     recent_df["log_date"] = recent_df["log_date"].dt.strftime("%b %d, %Y")
