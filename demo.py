@@ -2302,7 +2302,7 @@ TEXT = {
         "interaction_ibuprofen_aspirin": "Increases bleeding risk",
         "interaction_warfarin_aspirin": "Severe bleeding risk",
         "interaction_metformin_alcohol": "Lactic acidosis danger",
-        "interaction_paracetaemol_alcohol": "Liver damage risk",
+        "interaction_paracetamol_alcohol": "Liver damage risk",
         "interaction_none": "No major interactions found.",
         "voice_subtitle": "Hands-free actions for your meds",
         "start_listening": "Start Listening",
