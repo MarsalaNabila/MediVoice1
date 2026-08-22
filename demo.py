@@ -5014,28 +5014,36 @@ def prescription_upload_page(conn):
 # Purpose: compare two medicines against the known interaction table.
 # Design: Page Controller with a lookup-table rule engine.
 def interaction_checker_page(conn):
-    # Page Controller for checking known medicine interactions.
+    # Page Controller for checking up to three medicines at the same time.
     render_section_header("🔍", T("interaction_checker"), T("interaction_subtitle"))
-
-    col1, col2 = st.columns(2)
-    m1 = col1.text_input(T("medicine_one"))
-    m2 = col2.text_input(T("medicine_two"))
-
-    interactions = {
-        ("ibuprofen", "aspirin"): T("interaction_ibuprofen_aspirin"),
-        ("warfarin", "aspirin"): T("interaction_warfarin_aspirin"),
-        ("metformin", "alcohol"): T("interaction_metformin_alcohol"),
-        ("paracetamol", "alcohol"): T("interaction_paracetamol_alcohol")
-    }
-
-    if st.button(T("check")):
-        a, b = m1.lower(), m2.lower()
-        if (a, b) in interactions:
-            st.error(interactions[(a, b)])
-        elif (b, a) in interactions:
-            st.error(interactions[(b, a)])
+    st.caption("Enter medicine names exactly as written on the label. This checker covers selected common interactions only.")
+    
+    col1, col2, col3 = st.columns(3)  # Provide a wider comparison than the old two-field form.
+    medicine_one = col1.text_input(T("medicine_one"), key="interaction_medicine_one")
+    medicine_two = col2.text_input(T("medicine_two"), key="interaction_medicine_two")
+    medicine_three = col3.text_input("Medicine 3 (optional)", key="interaction_medicine_three")
+    
+    if st.button(T("check"), key="interaction_check_btn"):
+        medicines, matches = check_medicine_interactions(
+            [medicine_one, medicine_two, medicine_three]
+        )
+        if len(medicines) < 2:
+            st.warning("Enter at least two medicine names to check.")
+        elif matches:
+            st.error(f"Found {len(matches)} possible interaction(s).")
+            for match in matches:
+                first, second = match["medicines"]
+                st.markdown(
+                    f"**{first.title()} + {second.title()}**  \n"
+                    f"Severity: **{match['severity']}**  \n"
+                    f"Possible concern: {match['effect']}  \n"
+                    f"Suggested action: {match['action']}"
+                )
         else:
             st.success(T("interaction_none"))
+            st.info("No match was found in this app's limited interaction list.")
+    
+    st.warning("This tool is for general information only. Confirm all medicine combinations with a pharmacist or clinician.")
 
 
 # ============================================================
