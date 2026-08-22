@@ -47,8 +47,8 @@ st.set_page_config(page_title="MediVoice App - Your health companion", layout="w
 st.session_state.setdefault("dark_theme", False)  # Use the light theme until the user selects dark mode.
 
 # Purpose: choose and return the application's light or dark CSS theme.
-# Design: Facade, because callers use one function instead of theme details.
-def get_css():
+# Design: FACADE — hides the full light/dark CSS block behind one simple call.
+def get_css():  # [FACADE]
     # Facade for selecting the complete light or dark application theme.
     if st.session_state.dark_theme:
         return """
@@ -1658,8 +1658,8 @@ st.markdown("""
 
 
 # Purpose: render a consistent section heading across pages.
-# Design: Reusable component helper; no formal GoF pattern.
-def render_section_header(icon: str, title: str, subtitle: str = ""):
+# Design: DECORATOR — dynamically adds a styled header block on top of any page.
+def render_section_header(icon: str, title: str, subtitle: str = ""):  # [DECORATOR]
     subtitle_html = f"<p>{subtitle}</p>" if subtitle else ""
     icon_text = icon if icon and icon.isascii() else ""
     icon_html = f'<div class="section-icon">{icon_text}</div>' if icon_text else ""
@@ -1676,8 +1676,8 @@ def render_section_header(icon: str, title: str, subtitle: str = ""):
 
 
 # Purpose: render a small styled label in the selected Streamlit container.
-# Design: Reusable component helper; no formal GoF pattern.
-def render_pill(text: str, target=None):
+# Design: DECORATOR — dynamically adds a pill badge to any container without changing its content.
+def render_pill(text: str, target=None):  # [DECORATOR]
     target = target or st
     target.markdown(f"<div class='pill'>{text}</div>", unsafe_allow_html=True)
 
@@ -1745,22 +1745,23 @@ BANGLA_WEEKDAY_NAMES = {
 
 
 # Purpose: convert numbers to Bangla digits when the Bangla UI is active.
-# Design: Adapter-like localization helper; no formal GoF pattern.
-def to_local_digits(value: str):
+# Design: ADAPTER — translates English digit strings into Bangla script so the
+#          rest of the code never needs to know about locale differences.
+def to_local_digits(value: str):  # [ADAPTER]
     if st.session_state.get("ui_lang") == "bn":
         return str(value).translate(BANGLA_DIGIT_MAP)
     return str(value)
 
 
 # Purpose: return a number formatted for the active UI language.
-# Design: Delegation helper; no formal GoF pattern.
-def localized_number(value):
+# Design: ADAPTER — delegates to to_local_digits so callers stay locale-agnostic.
+def localized_number(value):  # [ADAPTER]
     return to_local_digits(value) if st.session_state.get("ui_lang") == "bn" else str(value)
 
 
 # Purpose: format weekday and month labels for the active UI language.
-# Design: Adapter-like localization helper; no formal GoF pattern.
-def localized_day_parts(day_obj):
+# Design: ADAPTER — converts Python date objects into locale-specific label pairs.
+def localized_day_parts(day_obj):  # [ADAPTER]
     weekday = day_obj.strftime("%a")
     month = day_obj.strftime("%b")
     day_num = day_obj.strftime("%d").lstrip("0") or "0"
@@ -1771,8 +1772,8 @@ def localized_day_parts(day_obj):
     return weekday, f"{month} {day_num}"
 
 # Purpose: normalize English and Bangla voice text into parser-friendly text.
-# Design: Pipeline-style transformation helper; no formal GoF pattern.
-def normalize_voice_string(text: str):
+# Design: STRATEGY — swappable text-normalization algorithm applied before parsing.
+def normalize_voice_string(text: str):  # [STRATEGY]
     normalized = text.strip()
 
     # Purpose: replace whole Bangla date words without altering larger words.
@@ -1826,8 +1827,8 @@ def normalize_voice_string(text: str):
     return normalized
 
 # Purpose: extract and normalize a time from spoken text.
-# Design: Parser utility; no formal GoF pattern.
-def parse_spoken_time(text: str):
+# Design: STRATEGY — one interchangeable parsing algorithm for time extraction.
+def parse_spoken_time(text: str):  # [STRATEGY]
     normalized = normalize_voice_string(text).lower()
     normalized = re.sub(r"(\d{1,2})\s*(?:ta|টা|টায়|টায়)\s*", r"\1 ", normalized)
     match = re.search(r"(?:at\s*)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?", normalized)
@@ -1844,8 +1845,8 @@ def parse_spoken_time(text: str):
     return f"{hour:02}:{int(minute):02}"
 
 # Purpose: extract a date from spoken text and relative date words.
-# Design: Parser utility; no formal GoF pattern.
-def parse_spoken_date(text: str):
+# Design: STRATEGY — one interchangeable parsing algorithm for date extraction.
+def parse_spoken_date(text: str):  # [STRATEGY]
     normalized = normalize_voice_string(text).lower()
     today = datetime.now().date()
     weekday_map = {
@@ -1922,8 +1923,8 @@ BN_NUMBER_WORDS = {
 }
 
 # Purpose: extract numeric digits, number words, or fractions from speech.
-# Design: Parser utility; no formal GoF pattern.
-def parse_spoken_number(text: str):
+# Design: STRATEGY — one interchangeable parsing algorithm for number extraction.
+def parse_spoken_number(text: str):  # [STRATEGY]
     normalized = normalize_voice_string(text).lower()
     match = re.search(r"\d+(?:\.\d+)?", normalized)
     if match:
@@ -1953,8 +1954,8 @@ def parse_spoken_number(text: str):
 
 
 # Purpose: convert seconds into a readable minutes or hours label.
-# Design: Formatting utility; no formal GoF pattern.
-def humanize_minutes(seconds):
+# Design: FACADE — hides the minutes/hours arithmetic behind one readable call.
+def humanize_minutes(seconds):  # [FACADE]
     if seconds is None:
         return "0m"
     minutes = max(1, int(round(abs(seconds) / 60)))
@@ -1968,8 +1969,8 @@ def humanize_minutes(seconds):
 
 
 # Purpose: classify a reminder as upcoming, soon, due, or overdue.
-# Design: State-like classification helper; no formal GoF pattern.
-def describe_reminder_status(diff_seconds):
+# Design: STRATEGY — selects a different label+style algorithm based on time diff.
+def describe_reminder_status(diff_seconds):  # [STRATEGY]
     if diff_seconds < -120:
         return T("chip_due_in").format(time=humanize_minutes(diff_seconds)), "chip-upcoming"
     if diff_seconds < 0:
@@ -1980,8 +1981,8 @@ def describe_reminder_status(diff_seconds):
 
 
 # Purpose: query and render the user's medicine activity for several days.
-# Design: Page component helper; no formal GoF pattern.
-def render_week_tracker(conn, user_id, start_date, days=5):
+# Design: DECORATOR — dynamically adds a week-tracker panel on top of any page.
+def render_week_tracker(conn, user_id, start_date, days=5):  # [DECORATOR]
     if not user_id:
         return
     end_date = start_date + timedelta(days=days - 1)
@@ -2043,8 +2044,8 @@ def render_week_tracker(conn, user_id, start_date, days=5):
 
 
 # Purpose: render one reminder and handle its actions and alerts.
-# Design: Component plus command-like button actions; no formal GoF pattern.
-def render_reminder_card(row, day_date, now, conn, user, user_email, family_lookup, allow_actions=True):
+# Design: DECORATOR — wraps raw reminder data with interactive UI actions (take, delete, snooze).
+def render_reminder_card(row, day_date, now, conn, user, user_email, family_lookup, allow_actions=True):  # [DECORATOR]
     notify_names, notify_emails = resolve_notification_targets(row, family_lookup)
     try:
         reminder_time = datetime.strptime(row["reminder_time"], "%H:%M").time()
@@ -2163,8 +2164,8 @@ def render_reminder_card(row, day_date, now, conn, user, user_email, family_look
         st.rerun()
 
 # Purpose: select fonts that can display English or Bangla chart labels.
-# Design: Configuration helper; no formal GoF pattern.
-def configure_chart_fonts():
+# Design: ADAPTER — adapts matplotlib font config to match the active UI language.
+def configure_chart_fonts():  # [ADAPTER]
     if st.session_state.get("ui_lang") == "bn":
         font_choices = [
             "Nirmala UI",
@@ -2197,8 +2198,8 @@ st.session_state.setdefault("notification_voice_lang_ref", {"value": st.session_
 st.session_state.setdefault("notification_log", [])  # Keep recent background-worker messages for the UI.
 st.session_state.setdefault("snooze_minutes", 10)  # Set the default reminder snooze duration.
 NOTIFICATION_POLL_SECONDS = 2  # Check for due notifications every two seconds.
-NOTIFICATION_QUEUE = deque(maxlen=50)  # Limit queued messages so memory usage stays bounded.
-NOTIFICATION_LOCK = threading.Lock()  # Protect the queue while the worker and UI access it.
+NOTIFICATION_QUEUE = deque(maxlen=50)  # [SINGLETON] Single shared queue instance used by both worker and UI.
+NOTIFICATION_LOCK = threading.Lock()  # [SINGLETON] Single shared lock protecting the queue across threads.
 # Voice alert grace windows (in seconds)
 VOICE_ALERT_WINDOW_BEFORE = 0     # no early alerts; wait until reminder time
 VOICE_ALERT_WINDOW_AFTER = 7200   # keep trying up to 2 hours late
@@ -2770,8 +2771,8 @@ TEXT = {
 
 
 # Purpose: translate a text key using the current session language.
-# Design: Facade over the localization dictionary.
-def T(k): return TEXT[st.session_state.ui_lang].get(k, k)
+# Design: FACADE — single entry point that hides the two-level TEXT dict lookup.
+def T(k): return TEXT[st.session_state.ui_lang].get(k, k)  # [FACADE]
 
 
 FAMILY_RELATIONSHIPS = [
@@ -2790,15 +2791,15 @@ FAMILY_RELATIONSHIPS = [
 
 
 # Purpose: convert a stored family relationship code to a localized label.
-# Design: Lookup/adapter helper; no formal GoF pattern.
-def relationship_label(code: str) -> str:
+# Design: ADAPTER — converts internal relationship codes into human-readable locale labels.
+def relationship_label(code: str) -> str:  # [ADAPTER]
     key = f"relationship_{code}"
     return TEXT[st.session_state.ui_lang].get(key, TEXT[st.session_state.ui_lang].get("relationship_other", code.title()))
 
 
 # Purpose: render a reusable row of key performance indicator cards.
-# Design: Reusable component helper; no formal GoF pattern.
-def render_kpi_cards(cards):
+# Design: DECORATOR — dynamically adds KPI card visuals on top of any page section.
+def render_kpi_cards(cards):  # [DECORATOR]
     html = "<div class='kpi-row'>"
     for card in cards:
         delta = card.get("delta")
@@ -2821,8 +2822,8 @@ def render_kpi_cards(cards):
 
 
 # Purpose: build a radar figure from analytics labels and values.
-# Design: Factory-like chart builder; no formal GoF pattern.
-def build_radar_chart(labels, values):
+# Design: FACTORY — creates and returns a configured radar chart object on demand.
+def build_radar_chart(labels, values):  # [FACTORY]
     angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
     values = values + values[:1]
     angles = angles + angles[:1]
@@ -2840,8 +2841,8 @@ def build_radar_chart(labels, values):
 
 
 # Purpose: build a pie figure showing intake methods.
-# Design: Factory-like chart builder; no formal GoF pattern.
-def build_method_pie(method_counts):
+# Design: FACTORY — creates and returns a configured pie chart object on demand.
+def build_method_pie(method_counts):  # [FACTORY]
     fig, ax = plt.subplots(figsize=(4.5, 4.5))
     colors = ["#5f54d7", "#c27ade", "#f6b2c0", "#f9d8a7"]
     ax.pie(
@@ -2858,8 +2859,8 @@ def build_method_pie(method_counts):
 
 
 # Purpose: load, normalize, and validate SMTP configuration.
-# Design: Facade over environment variables and Streamlit secrets.
-def get_email_config():
+# Design: FACADE — hides env-var/secrets lookup and type coercion behind one call.
+def get_email_config():  # [FACADE]
     secrets_obj = getattr(st, "secrets", None)
 
     # Purpose: read one configuration value from environment or Streamlit secrets.
@@ -2906,8 +2907,8 @@ def get_email_config():
 
 
 # Purpose: store a notification in the UI log or worker queue.
-# Design: Facade that hides the two notification destinations.
-def record_notification(message, use_session=True):
+# Design: FACADE — hides the two-destination routing (session log vs thread queue).
+def record_notification(message, use_session=True):  # [FACADE]
     # Route notifications to the UI log or background worker queue.
     if use_session:
         st.session_state.setdefault("notification_log", [])
@@ -2919,8 +2920,8 @@ def record_notification(message, use_session=True):
 
 
 # Purpose: send an email and report delivery errors consistently.
-# Design: Facade over SMTP setup, delivery, and feedback.
-def send_email_notification(recipients, subject, body, show_feedback=True):
+# Design: FACADE — wraps SMTP connection, login, send, and error handling in one call.
+def send_email_notification(recipients, subject, body, show_feedback=True):  # [FACADE]
     # Handle SMTP setup, delivery, errors, and user feedback in one place.
     recipients = [r.strip() for r in recipients if r and r.strip()]
     if not recipients:
@@ -2963,8 +2964,8 @@ def send_email_notification(recipients, subject, body, show_feedback=True):
 
 
 # Purpose: resolve selected family IDs into names and email addresses.
-# Design: Data-mapping helper; no formal GoF pattern.
-def resolve_notification_targets(row, family_lookup):
+# Design: ADAPTER — converts raw DB member IDs into usable name/email pairs for notifications.
+def resolve_notification_targets(row, family_lookup):  # [ADAPTER]
     notify_names = []
     notify_emails = []
     raw_notify = row.get("notify_member_ids")
@@ -2998,8 +2999,8 @@ def resolve_notification_targets(row, family_lookup):
 
 
 # Purpose: parse stored inventory notification settings safely.
-# Design: Deserialization adapter; no formal GoF pattern.
-def parse_inventory_notify_config(raw_value):
+# Design: ADAPTER — converts raw JSON strings from DB into structured Python objects.
+def parse_inventory_notify_config(raw_value):  # [ADAPTER]
     member_ids = []
     include_self = False
     if not raw_value:
@@ -3026,8 +3027,8 @@ def parse_inventory_notify_config(raw_value):
 
 
 # Purpose: build the final recipient list for an inventory alert.
-# Design: Policy/helper function; no formal GoF pattern.
-def resolve_inventory_recipient_emails(row, user_email, family_lookup):
+# Design: STRATEGY — applies recipient-resolution policy (self + members) interchangeably.
+def resolve_inventory_recipient_emails(row, user_email, family_lookup):  # [STRATEGY]
     member_ids, include_self = parse_inventory_notify_config(row.get("notify_member_ids"))
     recipients = []
     if include_self and user_email:
@@ -3044,8 +3045,8 @@ def resolve_inventory_recipient_emails(row, user_email, family_lookup):
 
 
 # Purpose: retrieve one user's email address from SQLite.
-# Design: Repository-like data-access helper; no formal GoF pattern.
-def get_user_email(conn, user_id):
+# Design: FACADE — hides the SQL query and error handling behind a single clean call.
+def get_user_email(conn, user_id):  # [FACADE]
     try:
         row = conn.execute("SELECT email FROM users WHERE username=?", (user_id,))
         record = row.fetchone()
@@ -3055,8 +3056,8 @@ def get_user_email(conn, user_id):
 
 
 # Purpose: detect low or empty stock and send notifications.
-# Design: Service-layer coordinator plus Facade-style public entry point.
-def process_inventory_alerts(conn, user_id, user_email, family_lookup, show_feedback=False):
+# Design: OBSERVER — watches inventory state and notifies subscribers (email recipients) on change.
+def process_inventory_alerts(conn, user_id, user_email, family_lookup, show_feedback=False):  # [OBSERVER]
     if not user_id:
         return
     try:
@@ -3131,8 +3132,8 @@ def process_inventory_alerts(conn, user_id, user_email, family_lookup, show_feed
 
 
 # Purpose: deduct medicine stock and record the usage event.
-# Design: Service-layer transaction helper; no formal GoF pattern.
-def record_inventory_usage(conn, user_id, medicine_name, quantity=1, source="manual"):
+# Design: FACADE — hides the two-step DB update (stock decrement + usage insert) behind one call.
+def record_inventory_usage(conn, user_id, medicine_name, quantity=1, source="manual"):  # [FACADE]
     # Deduct medicine stock and record the usage event.
     if not (user_id and medicine_name):
         return False, None
@@ -3178,8 +3179,8 @@ def record_inventory_usage(conn, user_id, medicine_name, quantity=1, source="man
 
 
 # Purpose: move a reminder forward and reset its alert flags.
-# Design: Command-like state mutation; no formal GoF pattern.
-def snooze_reminder(conn, reminder_id, minutes=10):
+# Design: FACADE — hides the read-modify-write DB sequence behind a single snooze call.
+def snooze_reminder(conn, reminder_id, minutes=10):  # [FACADE]
     # Move a reminder forward and reset its notification flags.
     try:
         row = conn.execute(
@@ -3209,23 +3210,23 @@ def snooze_reminder(conn, reminder_id, minutes=10):
 
 
 # Purpose: create a localized message for a medicine voice alert.
-# Design: Message factory/helper; no formal GoF pattern.
-def get_voice_alert_message(medicine, lang_code):
+# Design: FACTORY — produces a ready-to-speak message object based on medicine + language.
+def get_voice_alert_message(medicine, lang_code):  # [FACTORY]
     lang_dict = TEXT.get(lang_code, TEXT["en"])
     template = lang_dict.get("voice_alert_msg", TEXT["en"]["voice_alert_msg"])
     return template.format(medicine=medicine)
 
 
 # Purpose: send a localized medicine reminder to the text-to-speech service.
-# Design: Facade over message creation and the voice provider.
-def play_voice_alert(medicine, lang_code):
+# Design: FACADE — combines message creation and TTS dispatch into one simple call.
+def play_voice_alert(medicine, lang_code):  # [FACADE]
     # Build a localized medicine message and send it to text-to-speech.
     speak(get_voice_alert_message(medicine, lang_code), lang_code)
 
 
 # Purpose: find due medicine reminders and play their voice alerts.
-# Design: Service-layer coordinator; no formal GoF pattern.
-def process_voice_alerts(conn, user_id, alert_lang):
+# Design: OBSERVER — monitors reminder schedule and triggers voice alerts when due.
+def process_voice_alerts(conn, user_id, alert_lang):  # [OBSERVER]
     if not user_id:
         return
     today = datetime.now().date()
@@ -3272,8 +3273,8 @@ def process_voice_alerts(conn, user_id, alert_lang):
 
 
 # Purpose: coordinate due medicine and appointment email/voice notifications.
-# Design: Facade/service coordinator over several notification services.
-def process_due_notifications(conn, user_id, family_lookup, alert_lang="en", show_feedback=False):
+# Design: OBSERVER — central event handler that watches due times and notifies all channels.
+def process_due_notifications(conn, user_id, family_lookup, alert_lang="en", show_feedback=False):  # [OBSERVER]
     if not user_id:
         return
     # Get current time once at the start (needed for both medicine and appointments)
@@ -3389,8 +3390,8 @@ def process_due_notifications(conn, user_id, family_lookup, alert_lang="en", sho
                         print(f"Voice alert error for appointment with {a['doctor_name']}: {e}")
 
 # Purpose: open resources, run notification services, and close resources.
-# Design: Facade that coordinates the complete notification cycle.
-def run_due_notifications(user_id, alert_lang, show_feedback=False):
+# Design: FACADE — single entry point that opens DB, runs all observers, then closes cleanly.
+def run_due_notifications(user_id, alert_lang, show_feedback=False):  # [FACADE]
     if not user_id:
         return
     conn = sqlite3.connect("medicine.db")
@@ -3417,8 +3418,8 @@ def run_due_notifications(user_id, alert_lang, show_feedback=False):
 
 
 # Purpose: start and replace the background notification thread.
-# Design: Worker pattern with shared session state and a stop signal.
-def ensure_notification_worker(user_id):
+# Design: SINGLETON + OBSERVER — ensures only one worker thread exists and continuously observes events.
+def ensure_notification_worker(user_id):  # [SINGLETON + OBSERVER]
     """Starts the background notification worker for the current user."""
     if not user_id:
         return
@@ -3454,8 +3455,8 @@ def ensure_notification_worker(user_id):
 # DATABASE INIT
 # ============================================================
 # Purpose: create database tables and migrate missing legacy columns.
-# Design: Initialization/migration service; no formal GoF pattern.
-def init_db():
+# Design: FACADE — hides all CREATE TABLE and ALTER TABLE complexity behind one init call.
+def init_db():  # [FACADE]
     # Create application tables and add missing columns for old databases.
     conn = sqlite3.connect("medicine.db")
     c = conn.cursor()
@@ -3612,8 +3613,8 @@ init_db()
 # PASSWORD HASH
 # ============================================================
 # Purpose: create a salted hash for password storage or comparison.
-# Design: Security utility; no formal GoF pattern.
-def hash_password(password, salt=None):
+# Design: FACTORY — produces a (hash, salt) credential pair; generates salt when not supplied.
+def hash_password(password, salt=None):  # [FACTORY]
     # Create a salted password hash for storage or password comparison.
     if not salt:
         salt = os.urandom(16).hex()
@@ -4896,8 +4897,8 @@ def inventory_page(conn):
 # PRESCRIPTION IMAGE UPLOADS
 # ============================================================
 # Purpose: ensure the prescription table exists before file operations.
-# Design: Lazy initialization helper; no formal GoF pattern.
-def _ensure_prescription_table(conn):
+# Design: SINGLETON — guarantees the prescription table is created exactly once.
+def _ensure_prescription_table(conn):  # [SINGLETON]
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS prescriptions (
@@ -4914,8 +4915,8 @@ def _ensure_prescription_table(conn):
 
 
 # Purpose: create a safe, timestamped filename for an uploaded image.
-# Design: Factory-like value builder; no formal GoF pattern.
-def _build_prescription_filename(original_name: str) -> str:
+# Design: FACTORY — constructs a sanitized, timestamped filename object on demand.
+def _build_prescription_filename(original_name: str) -> str:  # [FACTORY]
     base_path = Path(original_name or "prescription.png")
     base = re.sub(r"[^A-Za-z0-9_-]", "", base_path.stem)
     if not base:
@@ -5153,8 +5154,8 @@ FREQUENCY_MAP = [
 
 
 # Purpose: parse a voice command and save its reminder details.
-# Design: Parser pipeline plus Page/Service boundary helper.
-def parse_voice(text, conn):
+# Design: STRATEGY — applies a pipeline of interchangeable parsing strategies (time, date, dosage, med name).
+def parse_voice(text, conn):  # [STRATEGY]
     # Parse a spoken command and save it as a medicine reminder.
     original = text.strip()
     cleaned = normalize_voice_string(original).lower()
