@@ -104,3 +104,10 @@ def _speak_offline(text):
             return True
     except Exception:
         return False
+def stop_voice():
+    """Stop any currently playing voice alert."""
+    try:
+        if pygame.mixer.get_init():
+            pygame.mixer.music.stop()
+    except Exception:
+        pass
