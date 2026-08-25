@@ -23,6 +23,15 @@ from collections import deque  # Queue notifications from the background worker.
 # - Strategy-like fallback: voice input tries the microphone, then sounddevice recording.
 # - State pattern: session_state controls login, page, language, and worker state.
 # - Registry-style dispatch: tools stores each tool's name, label, and page function together.
+# - OIDC adapter: Google identity claims are mapped to the local users table.
+#
+# MAINTENANCE MAP
+# 1. Startup initializes Streamlit state, loads UI resources, and migrates SQLite.
+# 2. Authentication routes to login/signup/recovery or the authenticated front controller.
+# 3. main_app() owns the page tabs; pages call focused helpers for persistence and services.
+# 4. Notification helpers run in a daemon worker and never render Streamlit UI directly.
+# 5. External boundaries are isolated behind voice, SMTP, Google OIDC, and Gemini facades.
+# See DEMO_ARCHITECTURE.md for diagrams and data-flow details.
 
 # Voice modules
 from voice_input import get_voice_input
@@ -3477,6 +3486,13 @@ def init_db():  # [FACADE]
         c.execute("ALTER TABLE users ADD COLUMN reset_code_hash TEXT")
     if "reset_code_expires_at" not in user_columns:
         c.execute("ALTER TABLE users ADD COLUMN reset_code_expires_at TEXT")
+    if "google_sub" not in user_columns:
+        c.execute("ALTER TABLE users ADD COLUMN google_sub TEXT")
+    # A Google subject is a stable provider identifier; it must never map to two local accounts.
+    c.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub
+        ON users(google_sub) WHERE google_sub IS NOT NULL
+    """)
 
     c.execute("""
         CREATE TABLE IF NOT EXISTS medicine(
@@ -3620,6 +3636,77 @@ def hash_password(password, salt=None):  # [FACTORY]
         salt = os.urandom(16).hex()
     hashed = hashlib.sha256((password + salt).encode()).hexdigest()
     return hashed, salt
+
+
+# ============================================================
+# GOOGLE OPENID CONNECT
+# ============================================================
+# Purpose: map a verified Google OIDC identity to the local MediVoice account.
+# Design: ADAPTER -- isolates Streamlit/Google claims from the application's user model.
+def google_login_is_configured():  # [ADAPTER]
+    """Return True only when the Streamlit OIDC configuration is complete."""
+    try:
+        auth = st.secrets.get("auth", {})
+    except (FileNotFoundError, KeyError):
+        return False
+    required = ("redirect_uri", "cookie_secret", "client_id", "client_secret", "server_metadata_url")
+    return all(auth.get(key) for key in required)
+
+
+def complete_google_login():  # [ADAPTER]
+    """Create or link the verified Google user, then establish the app session."""
+    try:
+        if not getattr(st.user, "is_logged_in", False):
+            return False
+        claims = st.user.to_dict()
+    except (AttributeError, KeyError):
+        return False
+
+    subject = str(claims.get("sub") or "").strip()
+    email = str(claims.get("email") or "").strip().lower()
+    email_verified = claims.get("email_verified") is True or str(claims.get("email_verified")).lower() == "true"
+    if not subject or not email or not email_verified:
+        st.error("Google did not provide a verified email address for this account.")
+        return False
+
+    conn = sqlite3.connect("medicine.db")
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT username FROM users WHERE google_sub=?", (subject,))
+        row = cursor.fetchone()
+        if row:
+            username = row[0]
+            cursor.execute("UPDATE users SET email=? WHERE google_sub=?", (email, subject))
+        else:
+            # Link an existing password account only by a Google-verified matching email.
+            cursor.execute("SELECT username, google_sub FROM users WHERE LOWER(TRIM(email))=?", (email,))
+            existing = cursor.fetchone()
+            if existing and existing[1] and existing[1] != subject:
+                st.error("This email is already linked to another Google account.")
+                return False
+            if existing:
+                username = existing[0]
+                cursor.execute("UPDATE users SET google_sub=?, email=? WHERE username=?", (subject, email, username))
+            else:
+                # The provider subject, rather than a mutable display name, is the stable local user ID.
+                username = f"google-{subject}"
+                cursor.execute(
+                    "INSERT INTO users(username, email, google_sub) VALUES(?,?,?)",
+                    (username, email, subject),
+                )
+        conn.commit()
+    except sqlite3.Error as error:
+        conn.rollback()
+        st.error(f"Google sign-in could not create your account: {error}")
+        return False
+    finally:
+        conn.close()
+
+    st.session_state.logged = True
+    st.session_state.user = username
+    st.session_state.auth_provider = "google"
+    st.session_state.page = "dashboard"
+    return True
 
 
 # ============================================================
@@ -3805,6 +3892,10 @@ def reset_password_page():
 # Design: Page Controller plus State pattern through session_state.
 def login_page():
     # Page Controller for username/password authentication.
+    # On the OAuth callback run, Streamlit makes the verified identity available in st.user.
+    if complete_google_login():
+        st.rerun()
+
     st.markdown(
         """
         <div class="mobile-shell">
@@ -3842,6 +3933,7 @@ def login_page():
         if stored == entered:
             st.session_state.logged = True
             st.session_state.user = user
+            st.session_state.auth_provider = "password"
             st.session_state.page = "dashboard"
             st.rerun()
         else:
@@ -3857,6 +3949,10 @@ def login_page():
         """,
         unsafe_allow_html=True,
     )
+
+    if google_login_is_configured():
+        # st.login performs the authorization-code exchange and validates state/nonce internally.
+        st.button("Continue with Google", key="google_login", on_click=st.login)
 
     col1, col2 = st.columns(2)
     with col1:
@@ -3966,6 +4062,10 @@ def sidebar_controls():
         st.session_state.pop("notification_worker_user", None)
         st.session_state.logged = False
         st.session_state.page = "login"
+        provider = st.session_state.pop("auth_provider", None)
+        # Clear Streamlit's signed OIDC identity cookie as well as the local session.
+        if provider == "google" and getattr(st.user, "is_logged_in", False):
+            st.logout()
         st.rerun()
 
 
@@ -6354,6 +6454,7 @@ def reports_page(conn):
 # Design: Front Controller for the authenticated application.
 def main_app():
     # Front Controller for authenticated pages and shared resources.
+    # Keep routing here so pages do not own each other's database connections or workers.
     sidebar_controls()
     # Ensure worker runs every time
     if st.session_state.user:
